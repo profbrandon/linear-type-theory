@@ -1,0 +1,19 @@
+
+
+Define id := \x : I. x ;
+
+Define curry := 
+    \f   : (I @ I) -+ I, 
+     a b : I. 
+        f (a @ b) ;
+
+Define uncurry :=
+    \f : I -+ I -+ I,
+     x : I @ I.
+        rec@ (I, \a b : I. f a b, x) ;
+
+Define unpair :=
+    \x : I @ I.
+        rec@ (I, \a : I. recI (I -+ I, id, a), x) ;
+
+Define buildpair := \x : I. * @ * ;
