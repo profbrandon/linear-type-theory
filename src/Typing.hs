@@ -7,6 +7,8 @@ module Typing
   ( 
     typeof 
   , typeof0
+  , typeofT
+  , typeofT0
     
   ) where
 
@@ -115,3 +117,25 @@ typeof0 ctx a@(App e1 e2) = do
           else
             Left "Function application required function input type to be the same as the argument's"
         _ -> Left "Expected function type as the left part of an application"
+
+
+-- | The typeofT computes the type of the type.
+typeofT :: Type -> Either String Type
+typeofT = typeofT0 []
+
+-- | The typeofT0 function is the helper function for typeofT.
+typeofT0 :: Context -> Type -> Either String Type
+typeofT0 _   (Univ i) = return (Univ $ i + 1)
+typeofT0 _   Unit     = return (Univ 1)
+
+typeofT0 ctx (Arrow t1 t2) = do
+  u1 <- typeofT0 ctx t1
+  u2 <- typeofT0 ctx t2
+  case (u1,u2) of
+    (Univ i, Univ j) -> return (Univ $ max i j)
+
+typeofT0 ctx (Prod t1 t2) = do
+  u1 <- typeofT0 ctx t1
+  u2 <- typeofT0 ctx t2
+  case (u1,u2) of
+    (Univ i, Univ j) -> return (Univ $ max i j)

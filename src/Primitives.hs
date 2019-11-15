@@ -19,6 +19,7 @@ data Type =
   | Arrow Type Type
   | Prod  Type Type
 --  | Bang  Type
+  | Univ  Int
   deriving (Eq)
 
 -- | The Term datum is a representation of the terms of the linear lambda
@@ -40,6 +41,6 @@ data Term =
 -- | The Judgement datum gives representations for certain interpreter
 -- actions.
 data Judgement =
-    Define String Term
-  | Typeof Term
+    Define String (Either Term Type)
+  | Typeof (Either Term Type)
   | Normal Term

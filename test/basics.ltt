@@ -7,6 +7,7 @@ Define curry :=
      a b : I. 
         f (a @ b) ;
 
+
 Define uncurry :=
     \f : I -+ I -+ I,
      x : I @ I.
@@ -16,4 +17,8 @@ Define unpair :=
     \x : I @ I.
         rec@ (I, \a : I. recI (I -+ I, id, a), x) ;
 
+Typeof unpair ;
+
 Define buildpair := \x : I. * @ * ;
+
+Typeof buildpair ;

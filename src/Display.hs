@@ -39,6 +39,7 @@ showCtx ((s, t):ps) = showCtx [(s, t)] ++ ", " ++ showCtx ps
 -- is there to allow easy extension to dependent types).
 showType :: Context -> Type -> String
 showType ctx Unit          = "I"
+showType ctx (Univ i)      = "U@" ++ show i
 showType ctx (Arrow t1 t2) = showTypeRightA ctx t1 ++ " -+ " ++ showType ctx t2
 showType ctx (Prod  t1 t2) = showTypeGroup ctx t1 ++ " @ " ++ showTypeGroup ctx t2
 
@@ -120,6 +121,8 @@ showTermGroup ctx t                = showTerm ctx t
 -- | The showJudge function converts judgements into their string
 -- counterparts using the given context.
 showJudge :: Context -> Judgement -> String
-showJudge ctx (Define s e) = "Define " ++ s ++ " := " ++ showTerm ctx e ++ ";"
-showJudge ctx (Typeof e)   = "Typeof " ++ showTerm ctx e ++ ";"
-showJudge ctx (Normal e)   = "Normal " ++ showTerm ctx e ++ ";"
+showJudge ctx (Define s (Left  e)) = "Define " ++ s ++ " := " ++ showTerm ctx e ++ " ;"
+showJudge ctx (Define s (Right t)) = "Define " ++ s ++ " := " ++ showType ctx t ++ " ;"
+showJudge ctx (Typeof (Left  e))   = "Typeof " ++ showTerm ctx e ++ " ;"
+showJudge ctx (Typeof (Right t))   = "Typeof " ++ showType ctx t ++ " ;"
+showJudge ctx (Normal e)           = "Normal " ++ showTerm ctx e ++ " ;"

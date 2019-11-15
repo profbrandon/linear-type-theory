@@ -1,0 +1,12 @@
+
+OPEN:
+
+[ ] Fix the problem with "Normal." I suspect that it has to do with the parser since it is occuring before the "File loaded" message
+    is displayed.
+
+[ ] Add Pi-Types and remove linear implication, making linear implication an instance of Pi-Types. 
+
+
+CLOSED:
+
+[X] Add universes to the collection of primitives and implement the associated functionality.

@@ -18,7 +18,7 @@ import System.Environment(getArgs)
 import System.Directory(doesFileExist)
 
 -- Domestic Imports
-import Typing(typeof, typeof0)
+import Typing(typeof, typeof0, typeofT)
 import Eval(eval, subAll)
 import Parser(parse, parseJ)
 
@@ -44,7 +44,8 @@ main = do
     putStrLn "~ Loading Files ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     (js, loaded) <- getFiles (reverse args)
     putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    defs <- run [] js
+    defs <- run True [] js
+    putStrLn ""
     loop (loaded, defs, "")
 
 -- | The getFiles function takes a list of filenames and repeatedly
@@ -96,10 +97,10 @@ loop state@(filenames, defs, prelude) = do
             putStrLn $ "Error: Parse failed at " ++ show i
             loop state
           Right e -> do 
-            defs' <- run defs [Normal e]
+            defs' <- run False defs [Normal e]
             loop (filenames, defs', prelude)
         Right js -> do 
-          defs' <- run defs js
+          defs' <- run False defs js
           loop (filenames, defs', prelude)
 
 -- | The getLineType gets the data representing what type of line it has recieved
@@ -132,24 +133,33 @@ handleCommand state cmd args =
 -- with the rest of the judgements. For 'Typeof' judgements, the function
 -- calculates the type of the corresponding term. For 'Normal' judgements,
 -- the function normalizes the corresponding term and hence evaluates it.
-run :: [(String, Term)] -> [Judgement] -> IO [(String, Term)]
-run defs [] = return defs
+run :: Bool -> [(String, Term)] -> [Judgement] -> IO [(String, Term)]
+run _ defs [] = return defs
 
-run defs ((Define s e):js) = do
+run bool defs ((Define s (Left e)):js) = do
   let e' = subAll e defs
   case typeof0 [] e' of
-    Left err -> do putStrLn $ "Error: " ++ err; run defs js
-    Right  _ -> run ((s,e'):defs) js
+    Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
+    Right  _ -> run bool ((s,e'):defs) js
 
-run defs ((Typeof e):js) = do
+run bool defs (j@(Typeof (Left e)):js) = do
+  if bool then putStrLn $ "> " ++ show j else return ()
   case typeof0 [] (subAll e defs) of
     Left err -> putStrLn $ "Error: " ++ err
     Right  t -> putStrLn $ "  : " ++ show t
-  run defs js
+  run bool defs js
 
-run defs ((Normal e):js) = do
+run bool defs (j@(Typeof (Right t)):js) = do
+  if bool then putStrLn $ "> " ++ show j else return ()
+  case typeofT t of
+    Left err -> putStrLn $ "Error: " ++ err
+    Right t' -> putStrLn $ "  : " ++ show t'
+  run bool defs js
+
+run bool defs (j@(Normal e):js) = do
+  if bool then putStrLn $ "> " ++ show j else return ()
   let e' = subAll e defs
   case typeof0 [] e' of
     Left err -> putStrLn $ "Error: " ++ err
     Right _  -> putStrLn $ "==> " ++ show (eval e')
-  run defs js
+  run bool defs js

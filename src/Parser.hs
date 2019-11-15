@@ -12,6 +12,7 @@ module Parser
 
 
 -- Foriegn Imports
+import Prelude hiding (either)
 import Control.Applicative ((<|>))
 import Text.ParserCombinators.ReadP
 
@@ -49,14 +50,28 @@ alpha = lowercase <|> uppercase
 numeric :: ReadP Char
 numeric = satisfy (\c -> c >= '0' && c <= '9')
 
+nonzero :: ReadP Int
+nonzero = do
+  d <- satisfy (\c -> c >= '1' && c <= '9')
+  ds <- many numeric
+  return (read (d:ds) :: Int)
+
 alnum :: ReadP Char
 alnum = alpha <|> numeric
+
+either :: ReadP a -> ReadP b -> ReadP (Either a b)
+either p q = readS_to_P (
+    \s -> case readP_to_S p s of
+      [] -> map (\(x,y) -> (Right x, y)) $ readP_to_S q s
+      ls -> map (\(x,y) -> (Left x, y)) ls
+  )
+
 
 
 -- Judgements
 
 judgements :: ReadP [Judgement]
-judgements = do skipSpaces; sepBy (define <|> typeof <|> normal) skipSpaces
+judgements = do skipSpaces; sepBy (define <++ typeof <++ normal) skipSpaces
 
 define :: ReadP Judgement
 define = do
@@ -66,7 +81,7 @@ define = do
   skipSpaces
   string ":="
   skipSpaces
-  e <- a_term
+  e <- either a_term a_type
   skipSpaces
   char ';'
   return (Define name e)
@@ -75,7 +90,7 @@ typeof :: ReadP Judgement
 typeof = do
   string "Typeof"
   skipSpaces
-  e <- a_term
+  e <- either a_term a_type
   skipSpaces
   char ';'
   return (Typeof e)
@@ -109,7 +124,7 @@ star = do char '*'; return Star
 
 a_type :: ReadP Type
 a_type = do
-  t1 <- unit <|> a_type_paren
+  t1 <- unit <|> universe <|> a_type_paren
   (do t2 <- prod_back; return (Prod t1 t2)) 
     <|> (do t2 <- arrow_back; return (Arrow t1 t2))
     <|> return t1
@@ -139,6 +154,15 @@ arrow_back = do
   t2 <- a_type
   return t2
 
+universe :: ReadP Type
+universe = do
+  char 'U'
+  skipSpaces
+  char '@'
+  skipSpaces
+  i <- nonzero
+  return (Univ i)
+
 
 -- Terms
 
@@ -165,8 +189,7 @@ term_variable = do s <- variable; return $ Var s
 handle_back :: Term -> ReadP Term
 handle_back e1 = do
    e2 <- option e1 (do e2 <- pair_back; return (Pair e1 e2))
-   e3 <- option e2 (do e2 <- app_back; handle_back (App e1 e2))
-   return e3
+   option e2 (do e2 <- app_back; handle_back (App e1 e2))
 
 app_back :: ReadP Term
 app_back = do skipSpaces; single_term
@@ -176,7 +199,7 @@ pair_back = do
   skipSpaces
   char '@'
   skipSpaces
-  e1 <- a_term
+  e1 <- single_term
   handle_back e1
 
 type_judges :: ReadP [(String,Type)]
