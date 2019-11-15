@@ -13,9 +13,10 @@ module Eval
 
 -- Domestic Imports
 import Primitives(Term(..))
+import Contexts(getFreeVars)
 
 -- Foriegn Imports
-import Data.List((\\), elem)
+import Data.List(elem)
 
 
 -- | The eval function performs reduction on the terms until a normal
@@ -62,14 +63,3 @@ sub (App e1 e2)       p          = App (sub e1 p) (sub e2 p)
 -- of them.
 subAll :: Term -> [(String, Term)] -> Term
 subAll e ps = foldl sub e (reverse ps)
-
--- | The getFreeVars function takes a term and returns the list of free
--- variables in the term.
-getFreeVars :: Term -> [String]
-getFreeVars (Var s)           = [s]
-getFreeVars Star              = []
-getFreeVars (RecI t e1 e2)    = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (Pair e1 e2)      = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (RecPair t e1 e2) = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (Lambda s t e)    = getFreeVars e \\ [s]
-getFreeVars (App e1 e2)       = getFreeVars e1 ++ getFreeVars e2

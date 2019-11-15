@@ -15,11 +15,12 @@ module Primitives
 -- | The Type datum is a representation of the types of the linear lambda
 -- calculus.
 data Type =
-    Unit
-  | Arrow Type Type
-  | Prod  Type Type
+    TVar String
+  | Unit
+  | Pi   String Type Type
+  | Prod Type Type
 --  | Bang  Type
-  | Univ  Int
+  | Univ Int
   deriving (Eq)
 
 -- | The Term datum is a representation of the terms of the linear lambda

@@ -86,7 +86,7 @@ typeof0 ctx r@(RecPair t e1 e2) = do
       case t2 of
         Prod t21 t22 -> 
           case t1 of
-            Arrow t11 (Arrow t12 t13) ->
+            Pi _ t11 (Pi _ t12 t13) ->
               if t13 == t then
                 if t11 == t21 && t12 == t22 then
                   return t
@@ -94,16 +94,24 @@ typeof0 ctx r@(RecPair t e1 e2) = do
                   Left "Pair recursion expected the pair and function types to agree"
               else
                 Left "Pair recursion expected the output types to match"
-            _ -> Left $ "Pair recursion expected the first argument to have type " ++ show (Arrow t21 (Arrow t22 t)) ++ " not " ++ show t1
+            _ -> Left $ "Pair recursion expected the first argument to have type " 
+              ++ show (Pi "_" t21 (Pi "_" t22 t)) ++ " not " ++ show t1
         _ -> Left "Pair recursion expected the second argument to be a pair"
 
 typeof0 []       (Var v) = Left $ "When searching for '" ++ v ++ "', the context was discovered to be empty"
 typeof0 [(s, t)] (Var v) = if s == v then return t else Left $ "Context did not contain the variable '" ++ v ++ "'"
-typeof0 ctx      (Var v) = Left $ "When looking in the context G := (" ++ showCtx ctx ++ ") for the variable '" ++ v ++ "' the context contained more than one item"
-
+typeof0 ctx      (Var v) =
+  case v `lookup` ctx of
+    Nothing -> Left $ "Context did not contain the variable '" ++ v ++ "'"
+    Just  t -> 
+      if and (map (\(_, t') -> case t' of Univ _ -> True; _ -> False) (ctx \\ [(v, t)])) then
+        return t
+      else
+        Left $ "When looking in the context G := (" ++ showCtx ctx ++ ") for the variable '" 
+          ++ v ++ "' the context contained more than one item"
 typeof0 ctx (Lambda s t e) = do
   t' <- typeof0 (push ctx (s, t)) e
-  return (Arrow t t')
+  return (Pi s t t')
 
 typeof0 ctx a@(App e1 e2) = do
   let pair = findViableSubs ("All subcontexts failed for the application '" ++ show a ++ "'") ctx e1 e2
@@ -111,7 +119,7 @@ typeof0 ctx a@(App e1 e2) = do
     Left e -> Left e
     Right (t1, t2) ->
       case t1 of
-        Arrow t11 t12 ->
+        Pi _ t11 t12 ->
           if t11 == t2 then
             return t12
           else
@@ -128,9 +136,9 @@ typeofT0 :: Context -> Type -> Either String Type
 typeofT0 _   (Univ i) = return (Univ $ i + 1)
 typeofT0 _   Unit     = return (Univ 1)
 
-typeofT0 ctx (Arrow t1 t2) = do
+typeofT0 ctx (Pi s t1 t2) = do
   u1 <- typeofT0 ctx t1
-  u2 <- typeofT0 ctx t2
+  u2 <- typeofT0 (push ctx (s, t1)) t2
   case (u1,u2) of
     (Univ i, Univ j) -> return (Univ $ max i j)
 

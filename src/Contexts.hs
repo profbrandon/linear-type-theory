@@ -9,12 +9,14 @@ module Contexts
   , push
   , getType
   , pushAll
+  , getFreeVars
+  , getFreeVarsT
   
   ) where
 
 
 -- Foriegn Imports
-import Data.List (subsequences, reverse, zip)
+import Data.List ((\\), subsequences, reverse, zip)
 import Data.Function (flip)
 
 -- Domestic Imports
@@ -44,3 +46,21 @@ pushAll ctx (p:ps) = push ctx p
 -- 'Nothing'.
 getType :: Context -> String -> Maybe Type
 getType = flip lookup
+
+-- | The getFreeVars function takes a term and returns the list of free
+-- variables in the term.
+getFreeVars :: Term -> [String]
+getFreeVars (Var s)           = [s]
+getFreeVars Star              = []
+getFreeVars (RecI t e1 e2)    = getFreeVars e1 ++ getFreeVars e2
+getFreeVars (Pair e1 e2)      = getFreeVars e1 ++ getFreeVars e2
+getFreeVars (RecPair t e1 e2) = getFreeVars e1 ++ getFreeVars e2
+getFreeVars (Lambda s t e)    = getFreeVars e \\ [s]
+getFreeVars (App e1 e2)       = getFreeVars e1 ++ getFreeVars e2
+
+getFreeVarsT :: Type -> [String]
+getFreeVarsT (TVar s)     = [s]
+getFreeVarsT Unit         = []
+getFreeVarsT (Univ _)     = []
+getFreeVarsT (Pi s t1 t2) = (getFreeVarsT t1 ++ getFreeVarsT t2) \\ [s]
+getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 ++ getFreeVarsT t2

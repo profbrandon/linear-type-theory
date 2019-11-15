@@ -13,7 +13,7 @@ module Display
 
 
 -- Domestic Imports
-import Contexts(Context(..), push, pushAll)
+import Contexts(Context(..), push, pushAll, getFreeVars, getFreeVarsT)
 import Primitives(Type(..), Term(..), Judgement(..))
 
 
@@ -38,18 +38,24 @@ showCtx ((s, t):ps) = showCtx [(s, t)] ++ ", " ++ showCtx ps
 -- equivalent using the context provided. (The context is not used but
 -- is there to allow easy extension to dependent types).
 showType :: Context -> Type -> String
-showType ctx Unit          = "I"
-showType ctx (Univ i)      = "U@" ++ show i
-showType ctx (Arrow t1 t2) = showTypeRightA ctx t1 ++ " -+ " ++ showType ctx t2
-showType ctx (Prod  t1 t2) = showTypeGroup ctx t1 ++ " @ " ++ showTypeGroup ctx t2
+showType ctx (TVar s)       = s
+showType ctx Unit           = "I"
+showType ctx (Univ i)       = "U@" ++ show i
+showType ctx p@(Pi s t1 t2) = 
+  if s `elem` (getFreeVarsT t2) then 
+    let (vars, ctx', t') = showVarsT ctx p
+    in "forall " ++ vars ++ ". " ++ showType ctx t'
+  else
+    showTypeRightA ctx t1 ++ " -+ " ++ showType ctx t2 
+showType ctx (Prod t1 t2) = showTypeGroup ctx t1 ++ " @ " ++ showTypeGroup ctx t2
 
 -- | The showTypeRightA function wraps types in parenthesis if they are
 -- products or arrows and are the hypothesis of an implication. Otherwise,
 -- the function simply shows the type.
 showTypeRightA :: Context -> Type -> String
-showTypeRightA ctx a@(Arrow _ _) = "(" ++ showType ctx a ++ ")"
-showTypeRightA ctx p@(Prod  _ _) = "(" ++ showType ctx p ++ ")"
-showTypeRightA ctx t             = showType ctx t
+showTypeRightA ctx a@(Pi _ _ _) = "(" ++ showType ctx a ++ ")"
+showTypeRightA ctx p@(Prod _ _) = "(" ++ showType ctx p ++ ")"
+showTypeRightA ctx t            = showType ctx t
 
 -- | The showTypeGroup function wraps any types that are "groups" of other
 -- types in parenthesis. As of right now, this amounts to non-unit types. 
@@ -76,6 +82,15 @@ findVars :: Term -> ([(String, Type)], Term)
 findVars (Lambda s t e) = ((s, t):vs, e') where (vs, e') = findVars e
 findVars e              = ([], e)
 
+findVarsT :: Type -> ([(String, Type)], Type)
+findVarsT p@(Pi s t1 t2) = 
+  if s `elem` getFreeVarsT t2 then
+    ((s, t1):vs, t2') 
+  else
+    ([], p)
+  where (vs, t2') = findVarsT t2
+findVarsT t            = ([], t)
+
 -- | The collectVars function takes a list of typing judgements and
 -- groups them via type.
 collectVars :: [(String, Type)] -> [([String], Type)]
@@ -101,8 +116,14 @@ showVarsHelp b ((ss,t):ls)
 showVars :: Context -> Term -> (String, Context, Term)
 showVars ctx e = (showVarsHelp True vs', pushAll ctx vs, e')
   where
-    vs'       = collectVars vs
-    (vs, e')  = findVars e
+    vs'      = collectVars vs
+    (vs, e') = findVars e
+
+showVarsT :: Context -> Type -> (String, Context, Type)
+showVarsT ctx t = (showVarsHelp True vs', pushAll ctx vs, e')
+  where
+    vs'      = collectVars vs
+    (vs, e') = findVarsT t
 
 -- | The showTermRightA function wraps a term in parenthesis if it is
 -- a lambda in the left hand side of an application.

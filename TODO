@@ -10,3 +10,5 @@ OPEN:
 CLOSED:
 
 [X] Add universes to the collection of primitives and implement the associated functionality.
+
+[X] Free variables function
