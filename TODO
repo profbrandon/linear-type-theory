@@ -1,6 +1,8 @@
 
 OPEN:
 
+[ ] \x : I. * @ * typechecks
+
 [ ] When loading problem1.ltt, the parser (possibly something else) takes a long time in loading the file.
 
 [ ] When loading running the judgements givein in problem2.ltt, there is a long delay between start and completion.
