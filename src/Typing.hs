@@ -59,7 +59,8 @@ typeof = typeof0 []
 -- and a term and computes either an error message or a typing for the term in
 -- the context.
 typeof0 :: Context -> Term -> Either String Type
-typeof0 _ Star = return Unit
+typeof0 []  Star = return Unit
+typeof0 ctx Star = Left $ "The context G := (" ++ showCtx ctx ++ ") should be empty when typing a '*' term"
 
 typeof0 ctx r@(RecI t e1 e2) = do
   let pair = findViableSubs ("All subcontexts failed for the recursion '" ++ show r ++ "'") ctx e1 e2

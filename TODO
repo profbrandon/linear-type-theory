@@ -1,15 +1,19 @@
 
 OPEN:
 
-[ ] \x : I. * @ * typechecks
+[ ] Implement Term over Type abstraction
+
+[ ] Redefine the recursors to be constants using dependent types.
 
 [ ] When loading problem1.ltt, the parser (possibly something else) takes a long time in loading the file.
 
-[ ] When loading running the judgements givein in problem2.ltt, there is a long delay between start and completion.
+[ ] When running the judgements given in problem2.ltt, there is a long delay between start and completion.
 
 [ ] Figure out how to (in some sense) lower types to the level of terms in order to do definitions, normalization, typing, etc.
 
 CLOSED:
+
+[X] \x : I. * @ * typechecks
 
 [X] Allows unbound type variables.
 
