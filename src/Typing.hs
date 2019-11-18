@@ -66,7 +66,7 @@ typeof0 ctx r@(RecI t e1 e2) = do
   case pair of
     Left e -> Left e
     Right (t1, t2) ->
-      if t1 == t then
+      if t1 `arrowEquiv` t then
         if t2 == Unit then
           return t
         else
@@ -89,8 +89,8 @@ typeof0 ctx r@(RecPair t e1 e2) = do
         Prod t21 t22 -> 
           case t1 of
             Pi _ t11 (Pi _ t12 t13) ->
-              if t13 == t then
-                if t11 == t21 && t12 == t22 then
+              if t13 `arrowEquiv` t then
+                if t11 `arrowEquiv` t21 && t12 `arrowEquiv` t22 then
                   return t
                 else
                   Left "Pair recursion expected the pair and function types to agree"
