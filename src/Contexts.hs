@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/14/19                --
+-- Last Updated:  11/17/19                --
 --------------------------------------------
 
 module Contexts
@@ -57,7 +57,10 @@ getFreeVars (Pair e1 e2)      = getFreeVars e1 ++ getFreeVars e2
 getFreeVars (RecPair t e1 e2) = getFreeVars e1 ++ getFreeVars e2
 getFreeVars (Lambda s t e)    = getFreeVars e \\ [s]
 getFreeVars (App e1 e2)       = getFreeVars e1 ++ getFreeVars e2
+getFreeVars (AppT e t)        = getFreeVars e ++ getFreeVarsT t
 
+-- | The getFreeVarsT function takes a type and returns the list of free
+-- variables in the type.
 getFreeVarsT :: Type -> [String]
 getFreeVarsT (TVar s)     = [s]
 getFreeVarsT Unit         = []

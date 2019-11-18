@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/14/19                --
+-- Last Updated:  11/17/19                --
 --------------------------------------------
 
 module Display
@@ -60,8 +60,10 @@ showTypeRightA ctx t            = showType ctx t
 -- | The showTypeGroup function wraps any types that are "groups" of other
 -- types in parenthesis. As of right now, this amounts to non-unit types. 
 showTypeGroup :: Context -> Type -> String
-showTypeGroup ctx Unit = showType ctx Unit
-showTypeGroup ctx t    = "(" ++ showType ctx t ++ ")"
+showTypeGroup ctx Unit     = showType ctx Unit
+showTypeGroup ctx (TVar s) = showType ctx $ TVar s
+showTypeGroup ctx (Univ i) = showType ctx $ Univ i
+showTypeGroup ctx t        = "(" ++ showType ctx t ++ ")"
 
 -- | The showTerm function converts a given term into its string equivalent
 -- using the context provided.
@@ -73,6 +75,7 @@ showTerm ctx (Pair e1 e2)      = showTermGroup ctx e1 ++ " @ " ++ showTermGroup 
 showTerm ctx (RecPair t e1 e2) = "rec@ (" ++ showType ctx t ++ ", " ++ showTerm ctx e1 ++ ", " ++ showTerm ctx e2 ++ ")"
 showTerm ctx l@(Lambda _ _ _)  = "\\" ++ vars ++ ". " ++ showTerm ctx' e' where (vars, ctx', e') = showVars ctx l
 showTerm ctx (App e1 e2)       = showTermRightA ctx e1 ++ " " ++ showTermGroup ctx e2
+showTerm ctx (AppT e t)        = showTermRightA ctx e ++ " " ++ showTypeGroup ctx t
 
 -- | The findVars function finds all variables declared in consecutive
 -- lambda expressions in a term, and finds the first non-lambda term.

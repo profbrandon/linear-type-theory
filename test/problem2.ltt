@@ -1,0 +1,2 @@
+
+Define functPairLeft  := \A B C : U@1, f : A -+ C, w : A @ B. rec@ (C @ B, \a : A, b : B. (f a) @ b, w) ;

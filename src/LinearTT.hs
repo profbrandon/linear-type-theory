@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/14/19                --
+-- Last Updated:  11/18/19                --
 --------------------------------------------
 
 module Main
@@ -18,12 +18,12 @@ import System.Environment(getArgs)
 import System.Directory(doesFileExist)
 
 -- Domestic Imports
-import Typing(typeof, typeof0, typeofT)
-import Eval(eval, subAll)
+import Typing(typeof, typeof0, typeofT, typeofT0)
+import Eval(eval, subAll, subAllT)
 import Parser(parse, parseJ)
 
 import Contexts(Context(..), push)
-import Primitives(Type(..), Term(..), Judgement(..))
+import Primitives(Type(..), Term(..), Judgement(..), Definition(..))
 
 import Interactive(State(..), LineType(..))
 import Commands(commands)
@@ -106,6 +106,7 @@ loop state@(filenames, defs, prelude) = do
 -- | The getLineType gets the data representing what type of line it has recieved
 -- from the input stream.
 getLineType :: String -> LineType
+getLineType "" = Null
 getLineType (':':input) =
   case ws of
     [] -> Null
@@ -116,7 +117,11 @@ getLineType (':':input) =
             _      -> Command cmd args
   where ws = words input
 
-getLineType s = Input s
+getLineType s =
+  if and (map isSpace s) then
+    Null
+  else
+    Input s
 
 -- | The handleCommand function executes the given commands and returns (IO) False
 -- if the exit command was called and (IO) True otherwise. For unrecognized
@@ -133,14 +138,19 @@ handleCommand state cmd args =
 -- with the rest of the judgements. For 'Typeof' judgements, the function
 -- calculates the type of the corresponding term. For 'Normal' judgements,
 -- the function normalizes the corresponding term and hence evaluates it.
-run :: Bool -> [(String, Term)] -> [Judgement] -> IO [(String, Term)]
+run :: Bool -> [Definition] -> [Judgement] -> IO [Definition]
 run _ defs [] = return defs
 
 run bool defs ((Define s (Left e)):js) = do
   let e' = subAll e defs
   case typeof0 [] e' of
     Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
-    Right  _ -> run bool ((s,e'):defs) js
+    Right  _ -> run bool ((s, Left e'):defs) js
+
+run bool defs ((Define s (Right t)):js) = do
+  case typeofT0 [] t of
+    Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
+    Right  _ -> run bool ((s, Right t):defs) js
 
 run bool defs (j@(Typeof (Left e)):js) = do
   if bool then putStrLn $ "> " ++ show j else return ()
@@ -151,9 +161,10 @@ run bool defs (j@(Typeof (Left e)):js) = do
 
 run bool defs (j@(Typeof (Right t)):js) = do
   if bool then putStrLn $ "> " ++ show j else return ()
-  case typeofT t of
-    Left err -> putStrLn $ "Error: " ++ err
-    Right t' -> putStrLn $ "  : " ++ show t'
+  let t' = subAllT t defs
+  case typeofT0 [] t' of
+    Left err  -> putStrLn $ "Error: " ++ err
+    Right t'' -> putStrLn $ "  : " ++ show t''
   run bool defs js
 
 run bool defs (j@(Normal e):js) = do

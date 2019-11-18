@@ -1,13 +1,28 @@
 
 OPEN:
 
-[ ] Fix the problem with "Normal." I suspect that it has to do with the parser since it is occuring before the "File loaded" message
-    is displayed.
+[ ] When loading problem1.ltt, the parser (possibly something else) takes a long time in loading the file.
 
-[ ] Add Pi-Types and remove linear implication, making linear implication an instance of Pi-Types. 
+[ ] When loading running the judgements givein in problem2.ltt, there is a long delay between start and completion.
 
+[ ] Figure out how to (in some sense) lower types to the level of terms in order to do definitions, normalization, typing, etc.
 
 CLOSED:
+
+[X] Allows unbound type variables.
+
+[X] Won't parse if there is terminating whitespace.
+
+[X] Problem with alpha equivalence and eta-reducible terms. (It turned out that this was a related problem to the acceptable arguments
+    problem in which arrow types were incorrectly declared different.)
+
+[X] Add Pi-Types and remove linear implication, making linear implication an instance of Pi-Types. 
+
+[X] Finish alpha-equivalence for determining which types are acceptable as arguments. (This turned out to not need alpha-equivalence.
+    Instead, it required checking if "I -+ I" is equal to "I -+ I" for example, since their internal Pi-strings may not match.)
+
+[X] Fix the problem with "Normal." I suspect that it has to do with the parser since it is occuring before the "File loaded" message
+    is displayed.
 
 [X] Add universes to the collection of primitives and implement the associated functionality.
 

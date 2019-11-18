@@ -1,5 +1,4 @@
 
-
 Define id := \A : U@1, x : A. x ;
 
 Define curry := \A B C : U@1, f : (A @ B) -+ C, x : A, y : B. f (x @ y) ;
@@ -14,3 +13,8 @@ Define functPairRight := \A B C : U@1, g : B -+ C, w : A @ B. rec@ (A @ C, \a : 
 
 Define univPropPair := \A B C : U@1, f : C -+ A, g : C -+ B, w : C @ C. rec@ (A @ B, \x y : C. (f x) @ (g y), w) ;
 
+
+Typeof id ;
+Typeof curry ;
+Typeof uncurry ;
+Typeof compose ;
