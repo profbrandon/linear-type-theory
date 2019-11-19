@@ -1,26 +1,27 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/17/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Contexts
   (
     Context(..)
-  , push
+
+  , push, pushAll
+
   , getType
-  , pushAll
-  , getFreeVars
-  , getFreeVarsT
+
+  , getFreeVars, getFreeVarsT
   
   ) where
 
 
 -- Foriegn Imports
-import Data.List ((\\), subsequences, reverse, zip)
-import Data.Function (flip)
+import Data.List ( (\\), subsequences, reverse, zip, union )
+import Data.Function ( flip )
 
 -- Domestic Imports
-import Primitives (Type(..), Term(..))
+import Primitives ( Type(..), Term(..) )
 
 
 -- | Contexts are merely lists of 'type judgements', which are themselves
@@ -52,12 +53,12 @@ getType = flip lookup
 getFreeVars :: Term -> [String]
 getFreeVars (Var s)           = [s]
 getFreeVars Star              = []
-getFreeVars (RecI t e1 e2)    = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (Pair e1 e2)      = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (RecPair t e1 e2) = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (Lambda s t e)    = getFreeVars e \\ [s]
-getFreeVars (App e1 e2)       = getFreeVars e1 ++ getFreeVars e2
-getFreeVars (AppT e t)        = getFreeVars e ++ getFreeVarsT t
+getFreeVars (RecI t e1 e2)    = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
+getFreeVars (Pair e1 e2)      = getFreeVars e1 `union` getFreeVars e2
+getFreeVars (RecPair t e1 e2) = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
+getFreeVars (Lambda s t e)    = getFreeVarsT t `union` (getFreeVars e \\ [s])
+getFreeVars (App e1 e2)       = getFreeVars e1 `union` getFreeVars e2
+getFreeVars (AppT e t)        = getFreeVars e `union` getFreeVarsT t
 
 -- | The getFreeVarsT function takes a type and returns the list of free
 -- variables in the type.
@@ -65,5 +66,5 @@ getFreeVarsT :: Type -> [String]
 getFreeVarsT (TVar s)     = [s]
 getFreeVarsT Unit         = []
 getFreeVarsT (Univ _)     = []
-getFreeVarsT (Pi s t1 t2) = (getFreeVarsT t1 ++ getFreeVarsT t2) \\ [s]
-getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 ++ getFreeVarsT t2
+getFreeVarsT (Pi s t1 t2) = getFreeVarsT t1 `union` (getFreeVarsT t2 \\ [s])
+getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 `union` getFreeVarsT t2

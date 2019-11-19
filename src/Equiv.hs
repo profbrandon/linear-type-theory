@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/18/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Equiv
@@ -13,11 +13,11 @@ module Equiv
 
 
 -- Foreign Imports
-import Data.List(union, lookup, elem)
+import Data.List ( union, lookup, elem )
 
 -- Domestic Imports
-import Primitives(Term(..), Type(..))
-import Contexts(getFreeVarsT)
+import Primitives ( Term(..), Type(..) )
+import Contexts ( getFreeVarsT )
 
 
 -- | The arrowEquiv function tests if two Pi types are equivalent. This is

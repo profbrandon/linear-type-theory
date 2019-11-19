@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/14/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Commands
@@ -12,10 +12,10 @@ module Commands
 
 
 -- Foriegn Imports
-import System.Process(callCommand)
+import System.Process ( callCommand )
 
 -- Domestic Imports
-import Interactive(State(..))
+import Interactive ( State(..) )
 
 
 -- The command datum represents the type signature of a command

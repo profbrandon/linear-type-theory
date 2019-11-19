@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/14/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Interactive
@@ -13,7 +13,8 @@ module Interactive
 
 
 -- Domestic Imports
-import Primitives(Term(..), Type(..), Definition(..))
+import Primitives ( Term(..), Type(..), Definition(..) )
+
 
 -- | The State datum represents the state of the interpreter. The first
 -- element of the tuple is the list of loaded filenames, the second is

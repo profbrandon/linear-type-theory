@@ -11,11 +11,13 @@ OPEN:
 
 [ ] Figure out how to (in some sense) lower types to the level of terms in order to do definitions, normalization, typing, etc.
 
+
 CLOSED:
 
-[X] \x : I. * @ * typechecks
-
 [X] Allows unbound type variables.
+
+
+[X] \x : I. * @ * typechecks
 
 [X] Won't parse if there is terminating whitespace.
 

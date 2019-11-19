@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/17/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Display
@@ -13,8 +13,8 @@ module Display
 
 
 -- Domestic Imports
-import Contexts(Context(..), push, pushAll, getFreeVars, getFreeVarsT)
-import Primitives(Type(..), Term(..), Judgement(..))
+import Contexts ( Context(..), push, pushAll, getFreeVars, getFreeVarsT )
+import Primitives ( Type(..), Term(..), Judgement(..) )
 
 
 -- Instance Declarations

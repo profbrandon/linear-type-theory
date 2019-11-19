@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/18/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Typing
@@ -17,7 +17,7 @@ module Typing
 import Data.List(permutations, subsequences, (\\))
 
 -- Domestic Imports
-import Contexts(Context(..), push)
+import Contexts(Context(..), push, getFreeVars)
 import Primitives(Type(..), Term(..))
 import Display(showCtx, showType)
 import Eval(subAllT)
@@ -50,10 +50,21 @@ getSubCtxs ctx = zip total total'
 findViableSubs :: String -> Context -> Term -> Term ->  Either String (Type, Type)
 findViableSubs s ctx e1 e2 = join s $ fmap (\(a,b) -> (typeof0 a e1, typeof0 b e2)) (getSubCtxs ctx)
 
+checkTypeVar :: Context -> Type -> Either String Type
+checkTypeVar ctx t@(TVar s) = 
+  case s `lookup` ctx of 
+    Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the type variable '"
+      ++ s ++ "'"
+    Just _  -> return t
+checkTypeVar _ t = return t
+
 -- | The typeof function returns either an error message or the type of a term
 -- (in the empty context).
 typeof :: Term -> Either String Type
-typeof = typeof0 []
+typeof t =
+  case getFreeVars t of
+    [] -> typeof0 [] t
+    vs -> Left $ "The term '" ++ show t ++ "' has unbound variables: " ++ show vs
 
 -- | The typeof0 function is a helper function for typeof0 that takes a context
 -- and a term and computes either an error message or a typing for the term in
@@ -69,7 +80,7 @@ typeof0 ctx r@(RecI t e1 e2) = do
     Right (t1, t2) ->
       if t1 `arrowEquiv` t then
         if t2 == Unit then
-          return t
+          checkTypeVar ctx t
         else
           Left "Unit recursion expected the second argument to be of type 'Unit'"
       else
@@ -92,7 +103,7 @@ typeof0 ctx r@(RecPair t e1 e2) = do
             Pi _ t11 (Pi _ t12 t13) ->
               if t13 `arrowEquiv` t then
                 if t11 `arrowEquiv` t21 && t12 `arrowEquiv` t22 then
-                  return t
+                  checkTypeVar ctx t
                 else
                   Left "Pair recursion expected the pair and function types to agree"
               else
@@ -104,13 +115,7 @@ typeof0 ctx r@(RecPair t e1 e2) = do
 typeof0 []       (Var v) = Left $ "When searching for '" ++ v ++ "', the context was discovered to be empty"
 typeof0 ctx@[(s, t)] (Var v) = 
   if s == v then 
-    case t of
-      TVar s -> 
-        case s `lookup` ctx of 
-          Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the type variable '"
-            ++ s ++ "'"
-          Just _  -> return t
-      _      -> return t
+    checkTypeVar ctx t
   else 
     Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the variable '" ++ v ++ "'"
 typeof0 ctx      (Var v) =
@@ -118,13 +123,7 @@ typeof0 ctx      (Var v) =
     Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the variable '" ++ v ++ "'"
     Just  t -> 
       if and (map (\(_, t') -> case t' of Univ _ -> True; _ -> False) (ctx \\ [(v, t)])) then
-        case t of
-          TVar s -> 
-            case s `lookup` ctx of 
-              Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the type variable '"
-                ++ s ++ "'"
-              Just _  -> return t
-          _      -> return t
+        checkTypeVar ctx t
       else
         Left $ "When looking in the context G := (" ++ showCtx ctx ++ ") for the variable '" 
           ++ v ++ "' the context contained more than one term judgement"
@@ -141,7 +140,7 @@ typeof0 ctx a@(App e1 e2) = do
       case t1 of
         Pi _ t11 t12 ->
           if t11 `arrowEquiv` t2 then
-            return t12
+            checkTypeVar ctx t12
           else
             Left $ "Expected the types '" ++ showType ctx t11 ++ "' and '" 
               ++ showType ctx t2 ++ "' to match in an application"

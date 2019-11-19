@@ -1,23 +1,23 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/17/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Eval
   ( 
     eval
-  , subAll
-  , subAllT
+
+  , subAll, subAllT
   
   ) where
 
 
 -- Domestic Imports
-import Primitives(Term(..), Type(..), Definition(..))
-import Contexts(getFreeVars)
+import Primitives ( Term(..), Type(..), Definition(..) )
+import Contexts ( getFreeVars )
 
 -- Foriegn Imports
-import Data.List(elem)
+import Data.List ( elem )
 
 
 -- | The eval function performs reduction on the terms until a normal

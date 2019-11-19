@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/18/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Main
@@ -11,28 +11,26 @@ module Main
 
 
 -- Foriegn Imports
-import Data.List(stripPrefix, isSuffixOf)
-import Data.Char(isSpace)
-import System.IO(BufferMode(..), stdin, stdout, hGetLine, hPutStr, hSetBuffering)
-import System.Environment(getArgs)
-import System.Directory(doesFileExist)
+import Data.List ( stripPrefix, isSuffixOf )
+import Data.Char ( isSpace )
+import System.IO ( BufferMode(..), stdin, stdout, hGetLine, hPutStr, hSetBuffering )
+import System.Environment ( getArgs )
+import System.Directory ( doesFileExist )
 
 -- Domestic Imports
-import Typing(typeof, typeof0, typeofT, typeofT0)
-import Eval(eval, subAll, subAllT)
-import Parser(parse, parseJ)
-
-import Contexts(Context(..), push)
-import Primitives(Type(..), Term(..), Judgement(..), Definition(..))
-
-import Interactive(State(..), LineType(..))
-import Commands(commands)
+import Typing ( typeof, typeof0, typeofT, typeofT0 )
+import Eval ( eval, subAll, subAllT )
+import Parser ( parse, parseJ )
+import Contexts ( Context(..), push )
+import Primitives ( Type(..), Term(..), Judgement(..), Definition(..) )
+import Interactive ( State(..), LineType(..) )
+import Commands ( commands )
 
 
 -- | The main function is the program entry point.
 main :: IO ()
 main = do 
-  putStrLn "~~~~~ Linear Type Theory Interpreter v2.0 ~~~~~"
+  putStrLn "~~~~~ Linear Type Theory Interpreter v2.1 ~~~~~"
   putStrLn "             For help,  type :help             "
   putStrLn ""
   hSetBuffering stdout NoBuffering
@@ -143,18 +141,18 @@ run _ defs [] = return defs
 
 run bool defs ((Define s (Left e)):js) = do
   let e' = subAll e defs
-  case typeof0 [] e' of
+  case typeof e' of
     Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
     Right  _ -> run bool ((s, Left e'):defs) js
 
 run bool defs ((Define s (Right t)):js) = do
-  case typeofT0 [] t of
+  case typeofT t of
     Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
     Right  _ -> run bool ((s, Right t):defs) js
 
 run bool defs (j@(Typeof (Left e)):js) = do
   if bool then putStrLn $ "> " ++ show j else return ()
-  case typeof0 [] (subAll e defs) of
+  case typeof (subAll e defs) of
     Left err -> putStrLn $ "Error: " ++ err
     Right  t -> putStrLn $ "  : " ++ show t
   run bool defs js
@@ -162,7 +160,7 @@ run bool defs (j@(Typeof (Left e)):js) = do
 run bool defs (j@(Typeof (Right t)):js) = do
   if bool then putStrLn $ "> " ++ show j else return ()
   let t' = subAllT t defs
-  case typeofT0 [] t' of
+  case typeofT t' of
     Left err  -> putStrLn $ "Error: " ++ err
     Right t'' -> putStrLn $ "  : " ++ show t''
   run bool defs js
@@ -170,7 +168,7 @@ run bool defs (j@(Typeof (Right t)):js) = do
 run bool defs (j@(Normal e):js) = do
   if bool then putStrLn $ "> " ++ show j else return ()
   let e' = subAll e defs
-  case typeof0 [] e' of
+  case typeof e' of
     Left err -> putStrLn $ "Error: " ++ err
     Right _  -> putStrLn $ "==> " ++ show (eval e')
   run bool defs js

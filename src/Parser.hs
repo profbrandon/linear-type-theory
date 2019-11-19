@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/18/19                --
+-- Last Updated:  11/19/19                --
 --------------------------------------------
 
 module Parser
@@ -12,12 +12,12 @@ module Parser
 
 
 -- Foriegn Imports
-import Prelude hiding (either)
-import Control.Applicative ((<|>))
+import Prelude hiding ( either )
+import Control.Applicative ( (<|>) )
 import Text.ParserCombinators.ReadP
 
 -- Domestic Imports
-import Primitives (Type(..), Term(..), Judgement(..))
+import Primitives ( Type(..), Term(..), Judgement(..) )
 
 
 -- Parsers
