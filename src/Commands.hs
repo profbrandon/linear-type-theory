@@ -80,6 +80,7 @@ helpMenu =
   "\n\
    \Help Menu Syntax\n\n\
 
+    \\t<name>                          A non-literal\n\
     \\t[name]                          An optional name\n\
     \\t{name}                          A name that occurs zero or more times\n\
     \\ta | b                           Either a or b must occur (not both)\n\n\n\
@@ -87,7 +88,7 @@ helpMenu =
 
    \Terminal\n\n\
 
-    \\tLinearTT {files}\n\n\n\
+    \\tLinearTT {<files>}\n\n\n\
 
 
    \Commands\n\n\
@@ -96,12 +97,12 @@ helpMenu =
 
     \\t:exit                           Exits the interactive environment\n\n\
 
-    \\t:system cmd                     Calls the system with the provided command\n\n\
+    \\t:system <cmd>                   Calls the system with the provided command\n\n\
 
     \\t:names                          Shows all of the names declared previously\n\
     \\t                                by definition judgements\n\n\
 
-    \\t:unbind name {names}            Unbinds the names from their definitions\n\
+    \\t:unbind <name> {<names>}        Unbinds the names from their definitions\n\
     \\t                                (if they have one)\n\n\
 
     \\t:imports                        Displays the names of all imported files\n\n\n\
@@ -109,12 +110,12 @@ helpMenu =
 
    \Judgements\n\n\
 
-    \\tDefine name := term [;]         Binds the name to the term\n\n\
+    \\tDefine <name> := <term> [;]     Binds the name to the term\n\n\
 
-    \\tTypeof term [;]                 Computes the type of the term and displays\n\
+    \\tTypeof <term> | <type> [;]      Computes the type of the term and displays\n\
     \\t                                it to the user\n\n\
 
-    \\tNormal term [;]                 Computes the normal form of the term and\n\
+    \\tNormal <term> [;]               Computes the normal form of the term and\n\
     \\t                                displays it to the user\n\n\n\
 
 
@@ -124,18 +125,18 @@ helpMenu =
 
     \\t*                               The 'unit' term\n\n\
 
-    \\t( term )                        Term grouping via parenthesis\n\n\
+    \\t( <term> )                      Term grouping via parenthesis\n\n\
 
-    \\tterm term                       Term application\n\n\
+    \\t<term> <term>                   Term application\n\n\
 
-    \\tterm @ term                     Pair creation\n\n\
+    \\t<term> @ <term>                 Pair creation\n\n\
 
-    \\trecI ( Type , term , term )     Unit recursion. The type given should be\n\
-    \\t                                the type of the first term. The type of\n\
+    \\trecI ( <Type> , <term>          Unit recursion. The type given should be\n\
+    \\t              , <term> )        the type of the first term. The type of\n\
     \\t                                the second term should be 'I'.\n\n\
 
-    \\trec@ ( Type , term , term )     Pair recursion. The type given should be\n\
-    \\t                                the second conclusion of the first term.\n\
+    \\trec@ ( <Type> , <term>          Pair recursion. The type given should be\n\
+    \\t              , <term> )        the second conclusion of the first term.\n\
     \\t                                To put this more concretely, if the first\n\
     \\t                                term is '\\ a b : I. a @ b' then the type\n\
     \\t                                should be 'I @ I'. The first term is a\n\
@@ -143,9 +144,9 @@ helpMenu =
     \\t                                given product to the result. The second\n\
     \\t                                term is the product.\n\n\
 
-    \\t\\ var {vars} : Type             Lambda abstraction. A lambda allows the\n\
-    \\t {, var {vars} : Type}          creation of variables in its body. Here,\n\
-    \\t               . term           we allow variables of the same type to be\n\
+    \\t\\ <var> {<var>} : <Type>       Lambda abstraction. A lambda allows the\n\
+    \\t {, <var> {<var>} : <Type>}     creation of variables in its body. Here,\n\
+    \\t               . <term>         we allow variables of the same type to be\n\
     \\t                                collected (delimited by spaces) and var-\n\
     \\t                                iables of different types to be separated\n\
     \\t                                via commas. The introduced variables are\n\
@@ -157,10 +158,15 @@ helpMenu =
 
     \\tI                               The 'unit' type\n\n\
 
-    \\t( Type )                        Type grouping via parenthesis\n\n\
+    \\t( <Type> )                      Type grouping via parenthesis\n\n\
 
-    \\tType -+ Type                    Arrow types (Implication), created via\n\
+    \\t<Type> -+ <Type>                Arrow types (Implication), created via\n\
     \\t                                lambdas.\n\n\
 
-    \\tType @ Type                     Pair types (Conjunction), created via the\n\
-    \\t                                pairing operator @.\n\n"
+    \\t<Type> @ <Type>                 Pair types (Conjunction), created via the\n\
+    \\t                                pairing operator @.\n\n\
+    
+    \\tforall <var> {<var>} : <Type>   Pi-Types (Linear Universal Quantification).\n\
+    \\t    {, <var> {<var>} : <Type>}  These are generated by dependent lambdas\n\
+    \\t                     . <Type>   and allow the user to abstract types over\n\
+    \\t                                terms.\n\n"

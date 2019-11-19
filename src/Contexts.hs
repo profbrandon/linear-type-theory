@@ -12,12 +12,15 @@ module Contexts
   , getType
 
   , getFreeVars, getFreeVarsT
+
+  , getSubCtxs
+  , isUnivCtx
   
   ) where
 
 
 -- Foriegn Imports
-import Data.List ( (\\), subsequences, reverse, zip, union )
+import Data.List ( (\\), permutations, subsequences, reverse, zip, union )
 import Data.Function ( flip )
 
 -- Domestic Imports
@@ -37,10 +40,8 @@ push ctx p = p : ctx
 -- | The pushAll function pushes all of the judgements onto the context.
 -- Example:
 --   pushAll [] [("a", I), ("b", I)] ==> [("b", I), ("a", I)]
---
 pushAll :: Context -> [(String, Type)] -> Context
-pushAll ctx []     = ctx
-pushAll ctx (p:ps) = push ctx p
+pushAll = foldl push
 
 -- | The getType function returns the type associated with the string
 -- provided. If the string is not found in the context, then it returns
@@ -68,3 +69,22 @@ getFreeVarsT Unit         = []
 getFreeVarsT (Univ _)     = []
 getFreeVarsT (Pi s t1 t2) = getFreeVarsT t1 `union` (getFreeVarsT t2 \\ [s])
 getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 `union` getFreeVarsT t2
+
+-- | The getSubCtxs function takes a context and returns all pairs of sub-
+-- contexts (i.e. disjoint but their union is the original context).
+getSubCtxs :: Context -> [(Context, Context)]
+getSubCtxs ctx = zip total total'
+  where
+    total = foldl (++) [] (fmap permutations (subsequences ctx))
+    total' = fmap (\ctx' -> ctx \\ ctx') total
+
+-- | The isUnivCtx function checks if the context is formed purely out of
+-- "higher-level types." This is to accomodate the asymmetry between types
+-- and terms (term variables must be used once and only once, whereas type
+-- variables can be used multiple times).
+isUnivCtx :: Context -> Bool
+isUnivCtx ctx = and (map isHLType ctx') where ctx' = (snd . unzip) ctx
+
+isHLType :: Type -> Bool
+isHLType (Univ _) = True
+isHLType _        = False

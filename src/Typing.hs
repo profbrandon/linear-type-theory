@@ -14,14 +14,14 @@ module Typing
 
 
 -- Foriegn Imports
-import Data.List(permutations, subsequences, (\\))
+import Data.List ( (\\) )
 
 -- Domestic Imports
-import Contexts(Context(..), push, getFreeVars)
-import Primitives(Type(..), Term(..))
-import Display(showCtx, showType)
-import Eval(subAllT)
-import Equiv(arrowEquiv)
+import Contexts ( Context(..), push, getFreeVars, getSubCtxs, isUnivCtx )
+import Primitives ( Type(..), Term(..) )
+import Display ( showCtx, showType )
+import Eval ( subAllT )
+import Equiv ( arrowEquiv )
 
 
 -- | The join function takes an error message and a list of pairs of either
@@ -34,14 +34,6 @@ join s []                        = Left s
 join s ((Right t1, Right t2):ls) = Right (t1, t2)
 join s (_:ls)                    = join s ls
 
--- | The getSubCtxs function takes a context and returns all pairs of sub-
--- contexts (i.e. disjoint but their union is the original context).
-getSubCtxs :: Context -> [(Context, Context)]
-getSubCtxs ctx = zip total total'
-  where
-    total = foldl (++) [] (fmap permutations (subsequences ctx))
-    total' = fmap (\ctx' -> ctx \\ ctx') total
-
 -- | The findViableSubs function takes an error message, a context, two terms,
 -- and computes whether any subcontexts type both of the terms. If this is not
 -- the case then the error message is returned. This function is needed due to
@@ -50,6 +42,8 @@ getSubCtxs ctx = zip total total'
 findViableSubs :: String -> Context -> Term -> Term ->  Either String (Type, Type)
 findViableSubs s ctx e1 e2 = join s $ fmap (\(a,b) -> (typeof0 a e1, typeof0 b e2)) (getSubCtxs ctx)
 
+-- | The checkTypeVar function determines if a type variable is bound in the
+-- present context.
 checkTypeVar :: Context -> Type -> Either String Type
 checkTypeVar ctx t@(TVar s) = 
   case s `lookup` ctx of 
@@ -70,8 +64,11 @@ typeof t =
 -- and a term and computes either an error message or a typing for the term in
 -- the context.
 typeof0 :: Context -> Term -> Either String Type
-typeof0 []  Star = return Unit
-typeof0 ctx Star = Left $ "The context G := (" ++ showCtx ctx ++ ") should be empty when typing a '*' term"
+typeof0 ctx  Star = 
+  if isUnivCtx ctx then
+    return Unit
+  else
+    Left $ "When deciding the type of '*', the context contained term variables."
 
 typeof0 ctx r@(RecI t e1 e2) = do
   let pair = findViableSubs ("All subcontexts failed for the recursion '" ++ show r ++ "'") ctx e1 e2
@@ -122,7 +119,7 @@ typeof0 ctx      (Var v) =
   case v `lookup` ctx of
     Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the variable '" ++ v ++ "'"
     Just  t -> 
-      if and (map (\(_, t') -> case t' of Univ _ -> True; _ -> False) (ctx \\ [(v, t)])) then
+      if isUnivCtx (ctx \\ [(v, t)]) then
         checkTypeVar ctx t
       else
         Left $ "When looking in the context G := (" ++ showCtx ctx ++ ") for the variable '" 
@@ -157,7 +154,9 @@ typeof0 ctx a@(AppT e t) = do
             return $ subAllT t11 [(s, Right t)]
           else 
             Left "Universe level mismatch"
-    _ -> Left "Expected Pi-type as the left part of a type application"
+    Pi _ t' _         -> Left $ "The lambda on the left should expect a type argument, not one of type '" 
+                          ++ showType ctx t' ++ "'"
+    _                 -> Left "Expected lambda as the left part of a type application"
 
 -- | The typeofT computes the type of the type.
 typeofT :: Type -> Either String Type
