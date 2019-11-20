@@ -13,7 +13,7 @@ module Contexts
 
   , getFreeVars, getFreeVarsT
 
-  , getSubCtxs
+  , getSubCtx
   , isUnivCtx
   
   ) where
@@ -70,13 +70,22 @@ getFreeVarsT (Univ _)     = []
 getFreeVarsT (Pi s t1 t2) = getFreeVarsT t1 `union` (getFreeVarsT t2 \\ [s])
 getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 `union` getFreeVarsT t2
 
--- | The getSubCtxs function takes a context and returns all pairs of sub-
--- contexts (i.e. disjoint but their union is the original context).
-getSubCtxs :: Context -> [(Context, Context)]
-getSubCtxs ctx = zip total total'
-  where
-    total = foldl (++) [] (fmap permutations (subsequences ctx))
-    total' = fmap (\ctx' -> ctx \\ ctx') total
+-- | The getSubCtx function takes a context and a list of variables. If there
+-- is a variable that is not in the context, then the function fails with a
+-- value of Nothing. Otherwise, a pair of the old context (minus the taken
+-- values) and the new sub context are returned.
+getSubCtx :: Context -> [String] -> Maybe (Context, Context)
+getSubCtx ctx [] = Just (ctx, [])
+getSubCtx ctx (n:ns) = do
+  t <- n `lookup` ctx
+  case t of
+    Univ _ -> do
+      (ctx', back) <- getSubCtx ctx ns
+      return (ctx', (n,t):back)
+    _      -> do
+      let ctx' = ctx \\ [(n,t)]
+      (ctx'', back) <- getSubCtx ctx' ns
+      return (ctx'', (n,t):back)
 
 -- | The isUnivCtx function checks if the context is formed purely out of
 -- "higher-level types." This is to accomodate the asymmetry between types

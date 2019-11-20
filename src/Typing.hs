@@ -14,10 +14,10 @@ module Typing
 
 
 -- Foriegn Imports
-import Data.List ( (\\) )
+import Data.List ( (\\), intersect )
 
 -- Domestic Imports
-import Contexts ( Context(..), push, getFreeVars, getSubCtxs, isUnivCtx )
+import Contexts ( Context(..), push, getFreeVars, getSubCtx, isUnivCtx )
 import Primitives ( Type(..), Term(..) )
 import Display ( showCtx, showType )
 import Eval ( subAllT )
@@ -39,18 +39,20 @@ join s (_:ls)                    = join s ls
 -- the case then the error message is returned. This function is needed due to
 -- some of the typing rules for the linear lambda calculus. Specifically, those
 -- for function application, pair creation, and recursion.
-findViableSubs :: String -> Context -> Term -> Term ->  Either String (Type, Type)
-findViableSubs s ctx e1 e2 = join s $ fmap (\(a,b) -> (typeof0 a e1, typeof0 b e2)) (getSubCtxs ctx)
-
--- | The checkTypeVar function determines if a type variable is bound in the
--- present context.
-checkTypeVar :: Context -> Type -> Either String Type
-checkTypeVar ctx t@(TVar s) = 
-  case s `lookup` ctx of 
-    Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the type variable '"
-      ++ s ++ "'"
-    Just _  -> return t
-checkTypeVar _ t = return t
+findViableSubs :: Context -> Term -> Term ->  Either String (Context, Context)
+findViableSubs ctx e1 e2 = do
+  let vs1  = getFreeVars e1 
+      vs2  = getFreeVars e2
+  case getSubCtx ctx vs1 of
+    Nothing           -> Left $ "The variable(s) " ++ show vs1 ++ " were not contained in the context (" ++ showCtx ctx ++ ")"
+    Just (ctx', sub1) ->
+      case getSubCtx ctx' vs2 of
+        Nothing -> Left $ "The variable(s) " ++ show vs2 ++ " were not contained in the context (" ++ showCtx ctx' ++ ")"
+        Just (ctx'', sub2) ->
+          if isUnivCtx ctx'' then
+            return (sub1, sub2)
+          else
+            Left $ "There are still term variables in the context (" ++ showCtx ctx'' ++ ") that must occur"
 
 -- | The typeof function returns either an error message or the type of a term
 -- (in the empty context).
@@ -71,56 +73,56 @@ typeof0 ctx  Star =
     Left $ "When deciding the type of '*', the context contained term variables."
 
 typeof0 ctx r@(RecI t e1 e2) = do
-  let pair = findViableSubs ("All subcontexts failed for the recursion '" ++ show r ++ "'") ctx e1 e2
-  case pair of
-    Left e -> Left e
-    Right (t1, t2) ->
-      if t1 `arrowEquiv` t then
-        if t2 == Unit then
-          checkTypeVar ctx t
-        else
-          Left "Unit recursion expected the second argument to be of type 'Unit'"
-      else
-        Left $ "Unit recursion expected the first argument to be of type " ++ showType ctx t
+  (ctx1, ctx2) <- findViableSubs ctx e1 e2
+  t1 <- typeof0 ctx1 e1
+  t2 <- typeof0 ctx2 e2
+  if t1 `arrowEquiv` t then
+    if t2 == Unit then
+      return t
+    else
+      Left "Unit recursion expected the second argument to be of type 'Unit'"
+  else
+    Left $ "Unit recursion expected the first argument to be of type " ++ showType ctx t
 
 typeof0 ctx p@(Pair e1 e2) = do
-  let pair = findViableSubs ("All subcontexts failed for the pair '" ++ show p ++ "'") ctx e1 e2
-  case pair of
-    Left  e        -> Left e
-    Right (t1, t2) -> return (Prod t1 t2)
+  (ctx1, ctx2) <- findViableSubs ctx e1 e2
+  t1 <- typeof0 ctx1 e1
+  t2 <- typeof0 ctx2 e2
+  return (Prod t1 t2)
 
 typeof0 ctx r@(RecPair t e1 e2) = do
-  let pair = findViableSubs ("All subcontexts failed for recursion '" ++ show r ++ "'") ctx e1 e2
-  case pair of
-    Left e -> Left e
-    Right (t1, t2) -> 
-      case t2 of
-        Prod t21 t22 -> 
-          case t1 of
-            Pi _ t11 (Pi _ t12 t13) ->
-              if t13 `arrowEquiv` t then
-                if t11 `arrowEquiv` t21 && t12 `arrowEquiv` t22 then
-                  checkTypeVar ctx t
-                else
-                  Left "Pair recursion expected the pair and function types to agree"
-              else
-                Left "Pair recursion expected the output types to match"
-            _ -> Left $ "Pair recursion expected the first argument to have type " 
-              ++ show (Pi "_" t21 (Pi "_" t22 t)) ++ " not " ++ show t1
-        _ -> Left "Pair recursion expected the second argument to be a pair"
+  (ctx1, ctx2) <- findViableSubs ctx e1 e2
+  t1 <- typeof0 ctx1 e1
+  t2 <- typeof0 ctx2 e2
+  case t2 of
+    Prod t21 t22 -> 
+      case t1 of
+        Pi _ t11 (Pi _ t12 t13) ->
+          if t13 `arrowEquiv` t then
+            if t11 `arrowEquiv` t21 && t12 `arrowEquiv` t22 then
+              return t
+            else
+              Left "Pair recursion expected the pair and function types to agree"
+          else
+            Left "Pair recursion expected the output types to match"
+        _ -> Left $ "Pair recursion expected the first argument to have type " 
+          ++ show (Pi "_" t21 (Pi "_" t22 t)) ++ " not " ++ show t1
+    _ -> Left "Pair recursion expected the second argument to be a pair"
 
-typeof0 []       (Var v) = Left $ "When searching for '" ++ v ++ "', the context was discovered to be empty"
+typeof0 []           (Var v) = Left $ "When searching for '" ++ v ++ "', the context was discovered to be empty"
+
 typeof0 ctx@[(s, t)] (Var v) = 
   if s == v then 
-    checkTypeVar ctx t
+    return t
   else 
     Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the variable '" ++ v ++ "'"
-typeof0 ctx      (Var v) =
+
+typeof0 ctx          (Var v) =
   case v `lookup` ctx of
     Nothing -> Left $ "The context G := (" ++ showCtx ctx ++ ") did not contain the variable '" ++ v ++ "'"
     Just  t -> 
       if isUnivCtx (ctx \\ [(v, t)]) then
-        checkTypeVar ctx t
+        return t
       else
         Left $ "When looking in the context G := (" ++ showCtx ctx ++ ") for the variable '" 
           ++ v ++ "' the context contained more than one term judgement"
@@ -130,18 +132,17 @@ typeof0 ctx (Lambda s t e) = do
   return (Pi s t t')
 
 typeof0 ctx a@(App e1 e2) = do
-  let pair = findViableSubs ("All subcontexts failed for the application '" ++ show a ++ "'") ctx e1 e2
-  case pair of
-    Left  e        -> Left e
-    Right (t1, t2) ->
-      case t1 of
-        Pi _ t11 t12 ->
-          if t11 `arrowEquiv` t2 then
-            checkTypeVar ctx t12
-          else
-            Left $ "Expected the types '" ++ showType ctx t11 ++ "' and '" 
-              ++ showType ctx t2 ++ "' to match in an application"
-        _            -> Left "Expected function type as the left part of an application"
+  (ctx1, ctx2) <- findViableSubs ctx e1 e2
+  t1 <- typeof0 ctx1 e1
+  t2 <- typeof0 ctx2 e2
+  case t1 of
+    Pi _ t11 t12 ->
+      if t11 `arrowEquiv` t2 then
+        return t12
+      else
+        Left $ "Expected the types '" ++ showType ctx t11 ++ "' and '" 
+          ++ showType ctx t2 ++ "' to match in an application"
+    _            -> Left "Expected function type as the left part of an application"
 
 typeof0 ctx a@(AppT e t) = do
   t1 <- typeof0 ctx e

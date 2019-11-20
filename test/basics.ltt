@@ -7,3 +7,7 @@ Define curry := \A B C : U@1, f : (A @ B) -+ C, x : A, y : B. f (x @ y) ;
 Define uncurry := \A B C : U@1, f : A -+ B -+ C, w : A @ B. rec@ (C, f, w) ;
 
 Define compose := \A B C : U@1, g : B -+ C, f : A -+ B, x : A. g (f x) ;
+
+Define functPairLeft := \A B C : U@1, f : A -+ C, w : A @ B. rec@ (C @ B, \a : A, b : B. (f a) @ b, w) ;
+
+Define functPairRight := \A B C : U@1, f : B -+ C, w : A @ B. rec@ (A @ C, \a : A, b : B. a @ (f b), w) ;
