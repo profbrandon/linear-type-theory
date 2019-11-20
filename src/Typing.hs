@@ -14,7 +14,7 @@ module Typing
 
 
 -- Foriegn Imports
-import Data.List ( (\\), intersect )
+import Data.List ( (\\) )
 
 -- Domestic Imports
 import Contexts ( Context(..), push, getFreeVars, getSubCtx, isUnivCtx )
