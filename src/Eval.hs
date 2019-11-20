@@ -73,7 +73,7 @@ sub (AppT e  t)       p              = AppT (sub e p) (subT t p)
 -- a type t and a definition and performs the corresponding substitution.
 subT :: Type -> Definition -> Type
 subT (TVar s)       (_ , Left  _)   = TVar s
-subT (TVar s)       (s', Right t)   = t 
+subT (TVar s)       (s', Right t)   = if s == s' then t else TVar s
 subT u@(Univ _)     _               = u
 subT Unit           _               = Unit
 subT (Pi s t1 t2)   p@(_ , Left  _) = Pi s (subT t1 p) (subT t2 p)

@@ -11,6 +11,9 @@ OPEN:
 
 [ ] Figure out how to (in some sense) lower types to the level of terms in order to do definitions, normalization, typing, etc.
 
+[ ] The type checker is fairly slow. One of my hypothesis as to why this is is that I am finding all of the possible subcontexts
+    of a context instead of performing an efficient search.
+
 
 CLOSED:
 

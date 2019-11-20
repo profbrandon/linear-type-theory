@@ -31,7 +31,10 @@ arrowEquiv p1@(Pi s t1 t2) p2@(Pi s' t1' t2') =
   else
     p1 == p2
 
-arrowEquiv t1 t2 = t1 == t2
+arrowEquiv (TVar s)     (TVar s')      = s == s'
+arrowEquiv (Prod t1 t2) (Prod t1' t2') = (arrowEquiv t1 t1') && (arrowEquiv t2 t2')
+arrowEquiv (Univ i)     (Univ j)       = i == j
+arrowEquiv t            t'             = t == t'
 
 -- | The alphaEquiv function determines if two terms are alpha-equivalent
 alphaEquiv :: Term -> Term -> Bool
