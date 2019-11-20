@@ -1,13 +1,15 @@
 
 OPEN:
 
+[ ] Parser is extremely slow on long inputs (especially long variables)
+
+[ ] Redo the entire parser to give readable error messages.
+
 [ ] The file type .altt which would be an "annotated ltt" file. This would
     be almost a "reversed" ltt file in that all text would be ignored unless
     preceded by a "> " which would signal the interpreter. On "> " the
     interpreter would execute the rest of the line, giving it's output, and
     waiting for the user to enter before displaying the next chunk of text.
-
-[ ] Redo the entire parser to give readable error messages.
 
 [ ] Comments. Planning on using the # # symbols to delineate comments
 
@@ -24,12 +26,11 @@ OPEN:
 
 CLOSED:
 
+[X] Fix the display. Presently it is not displaying applications correctly.
+
 [X] The type checker is fairly slow. One of my hypothesis as to why this is
     is that I am finding all of the possible subcontexts of a context instead
     of performing an efficient search.
-
-[X] When running the judgements given in problem2.ltt, there is a long delay
-    between start and completion.
 
 [X] Allows unbound type variables.
 

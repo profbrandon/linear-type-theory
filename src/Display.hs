@@ -140,6 +140,7 @@ showTermGroup :: Context -> Term -> String
 showTermGroup ctx p@(Pair _ _)     = "(" ++ showTerm ctx p ++ ")"
 showTermGroup ctx l@(Lambda _ _ _) = "(" ++ showTerm ctx l ++ ")"
 showTermGroup ctx a@(App _ _)      = "(" ++ showTerm ctx a ++ ")"
+showTermGroup ctx a@(AppT _ _)     = "(" ++ showTerm ctx a ++ ")"
 showTermGroup ctx t                = showTerm ctx t
 
 -- | The showJudge function converts judgements into their string
