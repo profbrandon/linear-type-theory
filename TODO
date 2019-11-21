@@ -1,9 +1,13 @@
 
 OPEN:
 
+[ ] Imports
+
 [ ] Parser is extremely slow on long inputs (especially long variables)
 
 [ ] Redo the entire parser to give readable error messages.
+
+[ ] Less technical optional syntax, i.e., "Fix t : A. " for "\t : A. "
 
 [ ] The file type .altt which would be an "annotated ltt" file. This would
     be almost a "reversed" ltt file in that all text would be ignored unless

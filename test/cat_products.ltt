@@ -1,0 +1,4 @@
+
+Define rho := \A B : U@1, a : A, b : B. a @ b ;
+
+Define lift := \A B C D : U@1, f : A -+ B, g : C -+ D, w : A @ C. rec@ (B @ D, \a : A, c : C. (f a) @ (g c), w) ;
