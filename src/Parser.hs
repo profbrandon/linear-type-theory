@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/19/19                --
+-- Last Updated:  11/22/19                --
 --------------------------------------------
 
 module Parser
@@ -171,7 +171,7 @@ rec_term s c = do
 -- Judgements
 
 judgement :: Parser Judgement
-judgement = define <|> typeof <|> normal
+judgement = try define <|> try typeof <|> normal
 
 define :: Parser Judgement
 define = Define <$> (symbol "Define" *> identifier <* symbol ":=") 

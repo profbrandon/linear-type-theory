@@ -1,6 +1,8 @@
 
 OPEN:
 
+[ ] Allow variable names like I and U.
+
 [ ] Imports
 
 [ ] Redo the entire parser to give readable error messages.
@@ -24,6 +26,8 @@ OPEN:
 
 
 CLOSED:
+
+[X] Problem with the Typeof and Define jugdements upon type arguments.
 
 [X] Parser is extremely slow on long inputs (especially long variables)
 
