@@ -23,17 +23,6 @@ import Display ( showCtx, showType )
 import Eval ( subAllT )
 import Equiv ( arrowEquiv )
 
-
--- | The join function takes an error message and a list of pairs of either
--- strings or types and compresses these to the error message if no pairs were
--- both types, or returns the pair of types. This is used in determining if any
--- subcontexts were well-behaved in the sense that they provided a typing
--- judgement for two terms.
-join :: String -> [(Either String Type, Either String Type)] -> Either String (Type, Type)
-join s []                        = Left s
-join s ((Right t1, Right t2):ls) = Right (t1, t2)
-join s (_:ls)                    = join s ls
-
 -- | The findViableSubs function takes an error message, a context, two terms,
 -- and computes whether any subcontexts type both of the terms. If this is not
 -- the case then the error message is returned. This function is needed due to

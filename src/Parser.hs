@@ -4,274 +4,156 @@
 --------------------------------------------
 
 module Parser
-  ( 
-    parse
-  , parseJ
+  (
     
   ) where
 
 
 -- Foriegn Imports
-import Prelude hiding ( either )
-import Control.Applicative ( (<|>) )
-import Text.ParserCombinators.ReadP
+import Text.Parsec ( parse, between, try, choice )
+import Text.Parsec.Error ( ParseError )
+import Text.Parsec.String ( Parser )
+import Text.Parsec.Expr ( Assoc(..) )
+import Text.Parsec.Char ( oneOf, anyChar, char, string, digit, letter, satisfy, upper, lower, alphaNum )
+import Text.Parsec.Combinator ( sepBy1, many1, manyTill, chainl1, chainr1, option )
+import Control.Applicative ( (<$>), (<*>), (<*), (*>), (<|>), many, (<$) )
+import Control.Monad ( void, ap, guard, join )
+import Data.Char ( isLetter, isDigit )
 
 -- Domestic Imports
 import Primitives ( Type(..), Term(..), Judgement(..) )
 
 
--- Parsers
-
-parseJ :: String -> Either Int [Judgement]
-parseJ s = 
-  case readP_to_S judgements s of
-    [] -> Left (-1)
-    l -> let (e, s') = last l in
-      if s' == "" then Right e else Left $ length s - length s'
-
-parse :: String -> Either Int Term
-parse s = 
-  case readP_to_S a_term s of
-    [] -> Left (-1)
-    l  -> let (e, s') = last l in
-      if s' == "" then Right e else Left $ length s - length s'
-
--- Helpers
-
-lowercase :: ReadP Char
-lowercase = satisfy (\c -> c >= 'a' && c <= 'z')
-
-uppercase :: ReadP Char
-uppercase = satisfy (\c -> c >= 'A' && c <= 'Z')
-
-alpha :: ReadP Char
-alpha = lowercase <|> uppercase
-
-numeric :: ReadP Char
-numeric = satisfy (\c -> c >= '0' && c <= '9')
-
-nonzero :: ReadP Int
-nonzero = do
-  d <- satisfy (\c -> c >= '1' && c <= '9')
-  ds <- many numeric
-  return (read (d:ds) :: Int)
-
-alnum :: ReadP Char
-alnum = alpha <|> numeric
-
-either :: ReadP a -> ReadP b -> ReadP (Either a b)
-either q p = readS_to_P (
-    \s -> case readP_to_S p s of
-      [] -> map (\(x,y) -> (Left x, y)) $ readP_to_S q s
-      ls -> map (\(x,y) -> (Right x, y)) ls
-  )
+type OpTable a = [(String, Assoc, (a -> a -> a))]
 
 
+-- Main Parsers
 
--- Judgements
+parseTerm :: String -> Either ParseError Term
+parseTerm = parse a_term ""
 
-judgements :: ReadP [Judgement]
-judgements = do 
-  skipSpaces
-  js <- sepBy (define <++ typeof <++ normal) skipSpaces
-  skipSpaces
-  return js
+-- Operators
 
-define :: ReadP Judgement
-define = do
-  string "Define"
-  skipSpaces
-  name <- (do c <- alpha; cs <- many alnum; return (c:cs))
-  skipSpaces
-  string ":="
-  skipSpaces
-  e <- either a_term a_type
-  skipSpaces
-  char ';'
-  return (Define name e)
+type_op_table :: OpTable Type
+type_op_table =
+  [ ("@",  AssocLeft,  Prod)
+  , ("-+", AssocRight, Pi "_")
+  ]
 
-typeof :: ReadP Judgement
-typeof = do
-  string "Typeof"
-  skipSpaces
-  e <- either a_term a_type
-  skipSpaces
-  char ';'
-  return (Typeof e)
+term_op_table :: OpTable Term
+term_op_table =
+  [ ("@", AssocLeft, Pair)
+  , ("",  AssocLeft, App)
+  ]
 
-normal :: ReadP Judgement
-normal = do
-  string "Normal"
-  skipSpaces
-  e <- a_term
-  skipSpaces
-  char ';'
-  return (Normal e)
+convert_op_table :: Parser a -> OpTable a -> Parser a
+convert_op_table p [] = p
+convert_op_table p ((op, assoc, c):ops) = convert_op_table (parse_op p op assoc c) ops
 
+parse_op :: Parser a -> String -> Assoc -> (a -> a -> a) -> Parser a
+parse_op p op assoc c = p `f` (symbol op *> return c)
+  where
+    f = case assoc of AssocLeft  -> chainl1
+                      AssocRight -> chainr1
+                      AssocNone  -> \p q -> do { a <- p; c <- q; b <- p; return $ c a b }
 
--- Variables 
+-- Basic Helper Parsers
 
-term_var :: ReadP Term
-term_var = do 
-  c <- lowercase
-  cs <- many (alnum)
-  return (Var $ c:cs)
+var_char :: Parser Char
+var_char = alphaNum <|> oneOf "_\'"
 
-type_var :: ReadP Type
-type_var = do 
-  c <- uppercase
-  cs <- many (alnum)
-  return (TVar $ c:cs)
+identifier :: Parser String
+identifier = lexeme $ (:) <$> alpha <*> many var_char where alpha = lower <|> upper
 
+nonzero :: Parser Int
+nonzero = read <$> ((:) <$> (oneOf "123456789") <*> many digit)
 
--- Unit and Star
+simpleWhitespace :: Parser ()
+simpleWhitespace = void $ many1 $ oneOf " \n\t"
 
-unit :: ReadP Type
-unit = do char 'I'; return Unit
+whitespace :: Parser ()
+whitespace = void $ many (simpleWhitespace <|> comment)
 
-star :: ReadP Term
-star = do char '*'; return Star
+whitespace1 :: Parser ()
+whitespace1 = void $ many1 (simpleWhitespace <|> comment)
+
+comment :: Parser ()
+comment = void $ char '#' <* manyTill anyChar (char '#')
+
+lexeme :: Parser a -> Parser a
+lexeme p = p <* whitespace
+
+symbol :: String -> Parser ()
+symbol []  = return ()
+symbol s   = void $ lexeme $ string s
+
+paren :: Parser a -> Parser a
+paren p = between (symbol "(") (symbol ")") p 
+
+-- Variables
+
+type_var :: Parser Type
+type_var = TVar <$> (lexeme $ (:) <$> upper <*> many var_char)
+
+term_var :: Parser Term
+term_var = Var <$> (lexeme $ (:) <$> lower <*> many var_char)
+
+type_ann :: Parser [(String, Type)]
+type_ann = fillType <$> (many1 identifier <* symbol ":") <*> a_type
+  where fillType ss t = fmap (\s -> (s,t)) ss
+
+-- Constants (For terms and types)
+
+unit_type :: Parser Type
+unit_type = return Unit <* symbol "I"
+
+univ_type :: Parser Type
+univ_type = symbol "U" *> symbol "@" *> (Univ <$> nonzero)
+
+unit_term :: Parser Term
+unit_term = return Star <* symbol "*"
 
 -- Types
 
-a_type :: ReadP Type
-a_type = do
-  t1 <- unit <++ universe <++ pi_type <++ type_var <++ a_type_paren
-  (do t2 <- prod_back; return (Prod t1 t2)) 
-    <|> (do t2 <- arrow_back; return (Pi "_" t1 t2))
-    <|> return t1
-
-a_type_paren :: ReadP Type
-a_type_paren = do
-  char '('
-  skipSpaces
-  t <- a_type
-  skipSpaces
-  char ')'
-  return t
-
-pi_type :: ReadP Type
-pi_type = do
-  string "forall"
-  skipSpaces
-  judges <- sepBy1 type_judges (do skipSpaces; char ','; skipSpaces)
-  let js = foldl (++) [] judges
-  skipSpaces
-  char '.'
-  skipSpaces
-  t <- a_type
-  return (convert js t)
+a_type :: Parser Type
+a_type = op_type <|> pi_type <|> basic_type
   where
-    convert [] t         = t
-    convert ((s,t'):ls) t = Pi s t' (convert ls t)
+    op_type    = convert_op_table basic_type type_op_table
 
-arrow_back :: ReadP Type
-arrow_back = do
-  skipSpaces
-  string "-+"
-  skipSpaces
-  t2 <- a_type
-  return t2
+basic_type :: Parser Type
+basic_type = unit_type <|> univ_type <|> type_var <|> paren a_type 
 
-prod_back :: ReadP Type
-prod_back = do
-  skipSpaces
-  char '@'
-  skipSpaces
-  t2 <- a_type
-  return t2
-
-universe :: ReadP Type
-universe = do
-  char 'U'
-  skipSpaces
-  char '@'
-  skipSpaces
-  i <- nonzero
-  return (Univ i)
-
+pi_type :: Parser Type
+pi_type = mapPi <$> (symbol "forall" *> (join <$> sepBy1 type_ann (symbol ",")) <* symbol ".") <*> a_type
+  where
+    mapPi as u = foldr (\(s,t) back -> Pi s t back) u as
 
 -- Terms
 
-a_term :: ReadP Term
-a_term = do
-  e1 <- single_term
-  handle_back e1
-
-single_term :: ReadP Term
-single_term = star <++ lambda <++ (recI <|> recPair) <++ term_var <++ a_term_paren
-
-a_term_paren :: ReadP Term
-a_term_paren = do
-  char '('
-  skipSpaces
-  e <- a_term
-  skipSpaces 
-  char ')'
-  return e
-
-handle_back :: Term -> ReadP Term
-handle_back e1 = do
-   e2 <- option e1 (do e2 <- pair_back; return (Pair e1 e2))
-   e3 <- option e2 (do t <- appT_back; handle_back (AppT e2 t))
-   option e3 (do e4 <- app_back; handle_back (App e3 e4))
-
-app_back :: ReadP Term
-app_back = do skipSpaces; single_term
-
-appT_back :: ReadP Type
-appT_back = do skipSpaces; a_type
-
-pair_back :: ReadP Term
-pair_back = do
-  skipSpaces
-  char '@'
-  skipSpaces
-  e1 <- single_term
-  handle_back e1
-
-type_judges :: ReadP [(String,Type)]
-type_judges = do
-  ss <- sepBy1 (do c <- alpha; cs <- many alnum; return (c:cs)) skipSpaces
-  skipSpaces
-  char ':'
-  skipSpaces
-  t <- a_type
-  return (fmap (\s -> (s, t)) ss)
-
-lambda :: ReadP Term
-lambda = do
-  char '\\'
-  skipSpaces
-  judgements <- sepBy1 type_judges (do skipSpaces; char ','; skipSpaces)
-  let js = foldl (++) [] judgements
-  skipSpaces
-  char '.'
-  skipSpaces
-  e <- a_term
-  return (convert js e)
+a_term :: Parser Term
+a_term = op_term <|> lambda_term <|> basic_term
   where
-    convert [] e         = e
-    convert ((s,t):ls) e = Lambda s t (convert ls e)
+    op_term    = convert_op_table appT_term term_op_table
 
-recA :: String -> (Type -> Term -> Term -> Term) -> ReadP Term
-recA s f = do
-  string s
-  skipSpaces
-  char '('
-  skipSpaces
-  t <- a_type
-  skipSpaces
-  char ','
-  skipSpaces
-  e1 <- a_term
-  skipSpaces
-  char ','
-  skipSpaces
-  e2 <- a_term
-  skipSpaces
-  char ')'
-  return (f t e1 e2)
+basic_term :: Parser Term
+basic_term = unit_term <|> (rec_term "I" RecI) <|> (rec_term "@" RecPair) <|> term_var <|> paren a_term
 
-recI = recA "recI" RecI
-recPair = recA "rec@" RecPair
+lambda_term :: Parser Term
+lambda_term = mapLambda <$> (symbol "\\" *> (join <$> sepBy1 type_ann (symbol ",")) <* symbol ".") <*> a_term
+  where
+    mapLambda as u = foldr (\(s,t) back -> Lambda s t back) u as
+
+appT_term :: Parser Term
+appT_term = do
+  e1 <- basic_term
+  option e1 (AppT e1 <$> (symbol "" *> a_type))
+
+rec_term :: String -> (Type -> Term -> Term -> Term) -> Parser Term
+rec_term s c = do
+  symbol ("rec" ++ s)
+  paren f
+  where
+    f = c <$> a_type <*> (symbol "," *> a_term) <*> (symbol "," *> a_term)
+
+-- Judgements
+
