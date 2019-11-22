@@ -5,7 +5,9 @@
 
 module Parser
   (
-    
+    parseTerm
+  , parseJudge
+
   ) where
 
 
@@ -31,6 +33,9 @@ type OpTable a = [(String, Assoc, (a -> a -> a))]
 
 parseTerm :: String -> Either ParseError Term
 parseTerm = parse a_term ""
+
+parseJudge :: String -> Either ParseError [Judgement]
+parseJudge = parse (whitespace *> many1 judgement) ""
 
 -- Operators
 
@@ -58,6 +63,9 @@ parse_op p op assoc c = p `f` (symbol op *> return c)
                       AssocNone  -> \p q -> do { a <- p; c <- q; b <- p; return $ c a b }
 
 -- Basic Helper Parsers
+
+parse_either :: Parser a -> Parser b -> Parser (Either a b)
+parse_either p q = (Left <$> try p) <|> (Right <$> q)
 
 var_char :: Parser Char
 var_char = alphaNum <|> oneOf "_\'"
@@ -118,7 +126,7 @@ unit_term = return Star <* symbol "*"
 a_type :: Parser Type
 a_type = op_type <|> pi_type <|> basic_type
   where
-    op_type    = convert_op_table basic_type type_op_table
+    op_type = convert_op_table basic_type type_op_table
 
 basic_type :: Parser Type
 basic_type = unit_type <|> univ_type <|> type_var <|> paren a_type 
@@ -131,12 +139,12 @@ pi_type = mapPi <$> (symbol "forall" *> (join <$> sepBy1 type_ann (symbol ",")) 
 -- Terms
 
 a_term :: Parser Term
-a_term = op_term <|> lambda_term <|> basic_term
+a_term = try op_term <|> lambda_term 
   where
-    op_term    = convert_op_table appT_term term_op_table
+    op_term = convert_op_table appT_term term_op_table
 
 basic_term :: Parser Term
-basic_term = unit_term <|> (rec_term "I" RecI) <|> (rec_term "@" RecPair) <|> term_var <|> paren a_term
+basic_term = unit_term <|> try (rec_term "I" RecI) <|> try (rec_term "@" RecPair) <|> term_var <|> paren a_term
 
 lambda_term :: Parser Term
 lambda_term = mapLambda <$> (symbol "\\" *> (join <$> sepBy1 type_ann (symbol ",")) <* symbol ".") <*> a_term
@@ -144,9 +152,14 @@ lambda_term = mapLambda <$> (symbol "\\" *> (join <$> sepBy1 type_ann (symbol ",
     mapLambda as u = foldr (\(s,t) back -> Lambda s t back) u as
 
 appT_term :: Parser Term
-appT_term = do
+appT_term = do 
   e1 <- basic_term
-  option e1 (AppT e1 <$> (symbol "" *> a_type))
+  back e1
+  where
+    back e     = do
+      e' <- appT_one e
+      if e /= e' then back e' else return e
+    appT_one e = option e $ AppT e <$> try basic_type
 
 rec_term :: String -> (Type -> Term -> Term -> Term) -> Parser Term
 rec_term s c = do
@@ -157,3 +170,15 @@ rec_term s c = do
 
 -- Judgements
 
+judgement :: Parser Judgement
+judgement = define <|> typeof <|> normal
+
+define :: Parser Judgement
+define = Define <$> (symbol "Define" *> identifier <* symbol ":=") 
+  <*> (parse_either a_term a_type <* symbol ";")
+
+typeof :: Parser Judgement
+typeof = Typeof <$> (symbol "Typeof" *> parse_either a_term a_type <* symbol ";")
+
+normal :: Parser Judgement
+normal = Normal <$> (symbol "Normal" *> a_term <* symbol ";")

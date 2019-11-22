@@ -1,5 +1,0 @@
-
-Define id := \A : U@1, x : A. x ;
-Define functPair := \A B C D : U@1, f : A -+ C, g : B -+ D, w : A @ B. rec@ (C @ D, \a : A, b : B. (f a) @ (g b), w) ;
-
-Define h := \A B : U@1. functPair A B A B (id A) (id B) ;

@@ -16,11 +16,12 @@ import Data.Char ( isSpace )
 import System.IO ( BufferMode(..), stdin, stdout, hGetLine, hPutStr, hSetBuffering )
 import System.Environment ( getArgs )
 import System.Directory ( doesFileExist )
+import Control.Monad ( mapM )
 
 -- Domestic Imports
 import Typing ( typeof, typeof0, typeofT, typeofT0 )
 import Eval ( eval, subAll, subAllT )
-import Parser ( parse, parseJ )
+import Parser ( parseTerm, parseJudge )
 import Contexts ( Context(..), push )
 import Primitives ( Type(..), Term(..), Judgement(..), Definition(..) )
 import Interactive ( State(..), LineType(..) )
@@ -40,8 +41,9 @@ main = do
     loop ([], [], "")
   else do
     putStrLn "~ Loading Files ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    (js, loaded) <- getFiles (reverse args)
+    (js, loaded, err) <- getFiles (reverse args) []
     putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    mapM putStrLn err
     defs <- run True [] js
     putStrLn ""
     loop (loaded, defs, "")
@@ -51,25 +53,25 @@ main = do
 -- then proceeds to parse them. The output is the list of success-
 -- fully parsed judgements and a list of the successfully loaded
 -- files. 
-getFiles :: [String] -> IO ([Judgement], [String])
-getFiles [] = return ([], [])
-getFiles (f:fs) = do
+getFiles :: [String] -> [String] -> IO ([Judgement], [String], [String])
+getFiles []     err = return ([], [], err)
+getFiles (f:fs) err = do
   exists <- doesFileExist f
   if ".ltt" `isSuffixOf` f then
     if exists then do
       str <- readFile f
-      case parseJ str of
-        Left  _  -> do putStrLn $ "Import file '" ++ f ++ "' could not be loaded."; getFiles fs
+      case parseJudge str of
+        Left  s  -> do putStrLn $ "Import file '" ++ f ++ "' could not be loaded."; getFiles fs ((show s):err)
         Right js -> do 
           putStrLn $ "File '" ++ f ++ "' loaded."
-          (back, loaded) <- getFiles fs
-          return (js ++ back, f:loaded)
+          (back, loaded, err') <- getFiles fs err
+          return (js ++ back, f:loaded, err')
     else do
       putStrLn $ "The file '" ++ f ++ "' does not exist."
-      getFiles fs
+      getFiles fs err
   else do
     putStrLn $ "Could not load '" ++ f ++ "' as it should have the .ltt file extension."
-    getFiles fs
+    getFiles fs err
 
 -- | The loop function is the main program loop that repeatedly handles
 -- commands and judgements. It is constantly repassing state to itself
@@ -89,10 +91,10 @@ loop state@(filenames, defs, prelude) = do
       let trim  = reverse . (dropWhile isSpace) . reverse . (dropWhile isSpace)
           s'    = trim s
           input = if last s' == ';' then s' else s' ++ ";"
-      in case parseJ input of
-        Left i -> case parse $ filter (/= ';') input of
-          Left i -> do 
-            putStrLn $ "Error: Parse failed at " ++ show i
+      in case parseJudge input of
+        Left _ -> case parseTerm $ filter (/= ';') input of
+          Left s -> do 
+            putStrLn $ "Error: " ++ show s
             loop state
           Right e -> do 
             defs' <- run False defs [Normal e]

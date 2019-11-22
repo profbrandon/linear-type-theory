@@ -1,15 +1,54 @@
+#=============== BASICS.LTT ===============#
+# Author: Brandon Harrington               #
+# Date: 11/21/2019                         #
+#                                          #
+# Contains some basic functions (hence the #
+# name) that are part of category theory.  #
+#==========================================#
 
 
-Define id := \A : U@1, x : A. x ;
+#---------------------------------------------------------#
+# Here we start with some basic definitions from category #
+# theory, i.e. identity morphisms, composition, and some  #
+# basic functors.                                         #
+#---------------------------------------------------------#
 
-Define curry := \A B C : U@1, f : (A @ B) -+ C, x : A, y : B. f (x @ y) ;
+# The polymorphic identity function for U@1. Note that in 
+  the categorical sense, the polymorphic nature is exactly
+  that the identity morphisms are a natural transformation
+  between the identity functor and itself.                 #
 
-Define uncurry := \A B C : U@1, f : A -+ B -+ C, w : A @ B. rec@ (C, f, w) ;
+Define id 
+    := \A : U@1, x : A. x ;
 
-Define compose := \A B C : U@1, g : B -+ C, f : A -+ B, x : A. g (f x) ;
+Typeof id ;
 
-Define functPairLeft := \A B C : U@1, f : A -+ C, w : A @ B. rec@ (C @ B, \a : A, b : B. (f a) @ b, w) ;
 
-Define functPairRight := \A B C : U@1, f : B -+ C, w : A @ B. rec@ (A @ C, \a : A, b : B. a @ (f b), w) ;
+# Polymorphic composition in the normal sense #
 
-Define functPair := \A B C D : U@1, f : A -+ C, g : B -+ D, w : A @ B. rec@ (C @ D, \a : A, b : B. (f a) @ (g b), w) ;
+Define compose 
+    := \A B C : U@1, g : B -+ C, f : A -+ B, x : A.
+            g (f x) ;
+
+Typeof compose ;
+
+
+# The functorial action of pairs in their first 
+  component. This is the first time in this file
+  that we encounter pair recursion.              #
+
+Define lift_pair1
+    := \A B X : U@1, f : A -+ X, w : A @ B.
+            rec@ (X @ B, \a : A, b : B. (f a) @ b, w) ;
+
+Typeof lift_pair1 ;
+
+
+# The functorial action of pairs in their second
+  component.                                     #
+
+Define lift_pair2
+    := \A B Y : U@1, g : B -+ Y, w : A @ B.
+            rec@ (A @ Y, \a : A, b : B. a @ (g b), w) ;
+
+Typeof lift_pair2 ;

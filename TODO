@@ -3,8 +3,6 @@ OPEN:
 
 [ ] Imports
 
-[ ] Parser is extremely slow on long inputs (especially long variables)
-
 [ ] Redo the entire parser to give readable error messages.
 
 [ ] Less technical optional syntax, i.e., "Fix t : A. " for "\t : A. "
@@ -21,14 +19,16 @@ OPEN:
 
 [ ] Redefine the recursors to be constants using dependent types.
 
-[ ] When loading problem1.ltt, the parser (possibly something else) takes a
-    long time in loading the file.
-
 [ ] Figure out how to (in some sense) lower types to the level of terms in
     order to do definitions, normalization, typing, etc.
 
 
 CLOSED:
+
+[X] Parser is extremely slow on long inputs (especially long variables)
+
+[X] When loading problem1.ltt, the parser (possibly something else) takes a
+    long time in loading the file.
 
 [X] Fix the display. Presently it is not displaying applications correctly.
 
