@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/19/19                --
+-- Last Updated:  11/23/19                --
 --------------------------------------------
 
 module Main
@@ -16,7 +16,8 @@ import Data.Char ( isSpace )
 import System.IO ( BufferMode(..), stdin, stdout, hGetLine, hPutStr, hSetBuffering )
 import System.Environment ( getArgs )
 import System.Directory ( doesFileExist )
-import Control.Monad ( mapM )
+import Control.Monad ( mapM, join )
+import Control.Applicative ( (<$>), (<|>), (<*>), (<*), (*>) )
 
 -- Domestic Imports
 import Typing ( typeof, typeof0, typeofT, typeofT0 )
@@ -44,8 +45,7 @@ main = do
     (js, loaded, err) <- getFiles (reverse args) []
     putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     mapM putStrLn err
-    defs <- run True [] js
-    putStrLn ""
+    defs <- run True [] js <* putStrLn ""
     loop (loaded, defs, "")
 
 -- | The getFiles function takes a list of filenames and repeatedly
@@ -67,11 +67,9 @@ getFiles (f:fs) err = do
           (back, loaded, err') <- getFiles fs err
           return (js ++ back, f:loaded, err')
     else do
-      putStrLn $ "The file '" ++ f ++ "' does not exist."
-      getFiles fs err
+      putStrLn ("The file '" ++ f ++ "' does not exist.") *> getFiles fs err
   else do
-    putStrLn $ "Could not load '" ++ f ++ "' as it should have the .ltt file extension."
-    getFiles fs err
+    putStrLn ("Could not load '" ++ f ++ "' as it should have the .ltt file extension.") *> getFiles fs err
 
 -- | The loop function is the main program loop that repeatedly handles
 -- commands and judgements. It is constantly repassing state to itself
@@ -84,24 +82,16 @@ loop state@(filenames, defs, prelude) = do
   case getLineType s of
     Exit        -> return ()
     Null        -> loop state
-    Command c a -> do 
-      state' <- handleCommand state c a
-      loop state'
+    Command c a -> join $ loop <$> handleCommand state c a
     Input s     ->
       let trim  = reverse . (dropWhile isSpace) . reverse . (dropWhile isSpace)
           s'    = trim s
           input = if last s' == ';' then s' else s' ++ ";"
       in case parseJudge input of
-        Left _ -> case parseTerm $ filter (/= ';') input of
-          Left s -> do 
-            putStrLn $ "Error: " ++ show s
-            loop state
-          Right e -> do 
-            defs' <- run False defs [Normal e]
-            loop (filenames, defs', prelude)
-        Right js -> do 
-          defs' <- run False defs js
-          loop (filenames, defs', prelude)
+        Left s -> case parseTerm $ filter (/= ';') input of
+                    Left s' -> putStrLn ("Error: " ++ show s) *> putStrLn ("Error: " ++ show s') *> loop state
+                    Right e -> join $ (\d -> loop (filenames, d, prelude)) <$> run False defs [Normal e]
+        Right js -> join $ (\d -> loop (filenames, d, prelude)) <$> run False defs js
 
 -- | The getLineType gets the data representing what type of line it has recieved
 -- from the input stream.
@@ -117,11 +107,9 @@ getLineType (':':input) =
             _      -> Command cmd args
   where ws = words input
 
-getLineType s =
-  if and (map isSpace s) then
-    Null
-  else
-    Input s
+getLineType s
+  | and (map isSpace s) = Null
+  | otherwise           = Input s
 
 -- | The handleCommand function executes the given commands and returns (IO) False
 -- if the exit command was called and (IO) True otherwise. For unrecognized
@@ -129,7 +117,7 @@ getLineType s =
 handleCommand :: State -> String -> [String] -> IO State
 handleCommand state cmd args =
   case cmd `lookup` commands of
-    Nothing -> do putStrLn $ "Unrecognized command '" ++ cmd ++ "'"; return state
+    Nothing -> putStrLn ("Unrecognized command '" ++ cmd ++ "'") *> return state
     Just f  -> f state args
 
 -- | The run command takes as input a list of definitions, a list of judge-
@@ -144,12 +132,12 @@ run _ defs [] = return defs
 run bool defs ((Define s (Left e)):js) = do
   let e' = subAll e defs
   case typeof e' of
-    Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
+    Left err -> putStrLn ("Error: " ++ err) *> run bool defs js
     Right  _ -> run bool ((s, Left e'):defs) js
 
 run bool defs ((Define s (Right t)):js) = do
   case typeofT t of
-    Left err -> do putStrLn $ "Error: " ++ err; run bool defs js
+    Left err -> putStrLn ("Error: " ++ err) *> run bool defs js
     Right  _ -> run bool ((s, Right t):defs) js
 
 run bool defs (j@(Typeof (Left e)):js) = do

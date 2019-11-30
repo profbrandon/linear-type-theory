@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/22/19                --
+-- Last Updated:  11/23/19                --
 --------------------------------------------
 
 module Parser
@@ -42,6 +42,7 @@ parseJudge = parse (whitespace *> many1 judgement) ""
 type_op_table :: OpTable Type
 type_op_table =
   [ ("@",  AssocLeft,  Prod)
+  , ("+",  AssocLeft,  Sum)
   , ("-+", AssocRight, Pi "_")
   ]
 
@@ -57,10 +58,9 @@ convert_op_table p ((op, assoc, c):ops) = convert_op_table (parse_op p op assoc 
 
 parse_op :: Parser a -> String -> Assoc -> (a -> a -> a) -> Parser a
 parse_op p op assoc c = p `f` (symbol op *> return c)
-  where
-    f = case assoc of AssocLeft  -> chainl1
-                      AssocRight -> chainr1
-                      AssocNone  -> \p q -> do { a <- p; c <- q; b <- p; return $ c a b }
+  where f = case assoc of AssocLeft  -> chainl1
+                          AssocRight -> chainr1
+                          AssocNone  -> \p q -> (\a c b -> c a b) <$> p <*> q <*> p
 
 -- Basic Helper Parsers
 
@@ -125,16 +125,14 @@ unit_term = return Star <* symbol "*"
 
 a_type :: Parser Type
 a_type = op_type <|> pi_type <|> basic_type
-  where
-    op_type = convert_op_table basic_type type_op_table
+  where op_type = convert_op_table basic_type type_op_table
 
 basic_type :: Parser Type
 basic_type = unit_type <|> univ_type <|> type_var <|> paren a_type 
 
 pi_type :: Parser Type
 pi_type = mapPi <$> (symbol "forall" *> (join <$> sepBy1 type_ann (symbol ",")) <* symbol ".") <*> a_type
-  where
-    mapPi as u = foldr (\(s,t) back -> Pi s t back) u as
+  where mapPi as u = foldr (\(s,t) back -> Pi s t back) u as
 
 -- Terms
 
@@ -144,29 +142,30 @@ a_term = try op_term <|> lambda_term
     op_term = convert_op_table appT_term term_op_table
 
 basic_term :: Parser Term
-basic_term = unit_term <|> try (rec_term "I" RecI) <|> try (rec_term "@" RecPair) <|> term_var <|> paren a_term
+basic_term = 
+      unit_term 
+  <|> try (rec_term "I" RecI) <|> try (rec_term "@" RecPair) <|> try rec_sum 
+  <|> try (inj_term "inl" Inl) <|> try (inj_term "inr" Inr)
+  <|> term_var <|> paren a_term
 
 lambda_term :: Parser Term
 lambda_term = mapLambda <$> (symbol "\\" *> (join <$> sepBy1 type_ann (symbol ",")) <* symbol ".") <*> a_term
-  where
-    mapLambda as u = foldr (\(s,t) back -> Lambda s t back) u as
+  where mapLambda as u = foldr (\(s,t) back -> Lambda s t back) u as
 
 appT_term :: Parser Term
-appT_term = do 
-  e1 <- basic_term
-  back e1
-  where
-    back e     = do
-      e' <- appT_one e
-      if e /= e' then back e' else return e
-    appT_one e = option e $ AppT e <$> try basic_type
+appT_term = do {e1 <- basic_term; back e1}
+  where back e     = do {e' <- appT_one e; if e /= e' then back e' else return e}
+        appT_one e = option e $ AppT e <$> try basic_type
 
 rec_term :: String -> (Type -> Term -> Term -> Term) -> Parser Term
-rec_term s c = do
-  symbol ("rec" ++ s)
-  paren f
-  where
-    f = c <$> a_type <*> (symbol "," *> a_term) <*> (symbol "," *> a_term)
+rec_term s c = symbol ("rec" ++ s) *> paren (c <$> a_type <*> (symbol "," *> a_term) <*> (symbol "," *> a_term))
+
+rec_sum :: Parser Term
+rec_sum = symbol "rec+" *> paren (RecSum <$> a_type <*> term_field <*> term_field <*> term_field)
+  where term_field = symbol "," *> a_term
+
+inj_term :: String -> (Type -> Term -> Term) -> Parser Term
+inj_term s c = symbol s *> (c <$> basic_type <*> basic_term)
 
 -- Judgements
 

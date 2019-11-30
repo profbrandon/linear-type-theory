@@ -1,6 +1,6 @@
 --------------------------------------------
 -- Author:        Brandon Harrington      --
--- Last Updated:  11/19/19                --
+-- Last Updated:  11/23/19                --
 --------------------------------------------
 
 module Interactive
@@ -23,8 +23,7 @@ import Primitives ( Term(..), Type(..), Definition(..) )
 type State = ([String], [Definition], String)
 
 -- | The LineType datum represents a kind of input line.
-data LineType = 
-    Input String 
-  | Command String [String]
-  | Null
-  | Exit
+data LineType = Input String 
+              | Command String [String]
+              | Null
+              | Exit

@@ -22,6 +22,7 @@ module Contexts
 -- Foriegn Imports
 import Data.List ( (\\), permutations, subsequences, reverse, zip, union )
 import Data.Function ( flip )
+import Control.Monad ( join )
 
 -- Domestic Imports
 import Primitives ( Type(..), Term(..) )
@@ -52,14 +53,17 @@ getType = flip lookup
 -- | The getFreeVars function takes a term and returns the list of free
 -- variables in the term.
 getFreeVars :: Term -> [String]
-getFreeVars (Var s)           = [s]
-getFreeVars Star              = []
-getFreeVars (RecI t e1 e2)    = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
-getFreeVars (Pair e1 e2)      = getFreeVars e1 `union` getFreeVars e2
-getFreeVars (RecPair t e1 e2) = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
-getFreeVars (Lambda s t e)    = getFreeVarsT t `union` (getFreeVars e \\ [s])
-getFreeVars (App e1 e2)       = getFreeVars e1 `union` getFreeVars e2
-getFreeVars (AppT e t)        = getFreeVars e `union` getFreeVarsT t
+getFreeVars (Var s)             = [s]
+getFreeVars Star                = []
+getFreeVars (RecI t e1 e2)      = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
+getFreeVars (Pair e1 e2)        = getFreeVars e1 `union` getFreeVars e2
+getFreeVars (RecPair t e1 e2)   = getFreeVarsT t `union` getFreeVars e1 `union` getFreeVars e2
+getFreeVars (Inl t e)           = getFreeVarsT t `union` getFreeVars e
+getFreeVars (Inr t e)           = getFreeVarsT t `union` getFreeVars e
+getFreeVars (RecSum t e1 e2 e3) = getFreeVarsT t `union` (join $ fmap getFreeVars [e1, e2, e3])
+getFreeVars (Lambda s t e)      = getFreeVarsT t `union` (getFreeVars e \\ [s])
+getFreeVars (App e1 e2)         = getFreeVars e1 `union` getFreeVars e2
+getFreeVars (AppT e t)          = getFreeVars e `union` getFreeVarsT t
 
 -- | The getFreeVarsT function takes a type and returns the list of free
 -- variables in the type.
@@ -69,6 +73,7 @@ getFreeVarsT Unit         = []
 getFreeVarsT (Univ _)     = []
 getFreeVarsT (Pi s t1 t2) = getFreeVarsT t1 `union` (getFreeVarsT t2 \\ [s])
 getFreeVarsT (Prod t1 t2) = getFreeVarsT t1 `union` getFreeVarsT t2
+getFreeVarsT (Sum  t1 t2) = getFreeVarsT t1 `union` getFreeVarsT t2
 
 -- | The getSubCtx function takes a context and a list of variables. If there
 -- is a variable that is not in the context, then the function fails with a

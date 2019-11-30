@@ -33,6 +33,12 @@ Define compose
 Typeof compose ;
 
 
+
+#---------------------------------------------------------#
+# Here we implement some functorial action of some of the #
+# data types, pairs, sums, and linear implications.       #
+#---------------------------------------------------------#
+
 # The functorial action of pairs in their first 
   component. This is the first time in this file
   that we encounter pair recursion.              #
@@ -52,3 +58,9 @@ Define lift_pair2
             rec@ (A @ Y, \a : A, b : B. a @ (g b), w) ;
 
 Typeof lift_pair2 ;
+
+
+# The functorial action of sums #
+
+Define lift_sum
+    := \A B X Y : U@1, 
