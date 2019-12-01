@@ -12,7 +12,7 @@ module Parser
 
 
 -- Foriegn Imports
-import Text.Parsec ( parse, between, try, choice )
+import Text.Parsec ( parse, between, try, choice, parserZero )
 import Text.Parsec.Error ( ParseError )
 import Text.Parsec.String ( Parser )
 import Text.Parsec.Expr ( Assoc(..) )
@@ -21,6 +21,7 @@ import Text.Parsec.Combinator ( sepBy1, many1, manyTill, chainl1, chainr1, optio
 import Control.Applicative ( (<$>), (<*>), (<*), (*>), (<|>), many, (<$) )
 import Control.Monad ( void, ap, guard, join )
 import Data.Char ( isLetter, isDigit )
+import Data.List ( elem )
 
 -- Domestic Imports
 import Primitives ( Type(..), Term(..), Judgement(..) )
@@ -36,6 +37,16 @@ parseTerm = parse a_term ""
 
 parseJudge :: String -> Either ParseError [Judgement]
 parseJudge = parse (whitespace *> many1 judgement) ""
+
+-- Keywords
+
+keywords :: [String]
+keywords = [ "forall"
+           , "I"
+           , "inl"
+           , "inr"
+           , "rec"
+           ]
 
 -- Operators
 
@@ -64,14 +75,11 @@ parse_op p op assoc c = p `f` (symbol op *> return c)
 
 -- Basic Helper Parsers
 
-parse_either :: Parser a -> Parser b -> Parser (Either a b)
-parse_either p q = (Left <$> try p) <|> (Right <$> q)
-
 var_char :: Parser Char
 var_char = alphaNum <|> oneOf "_\'"
 
 identifier :: Parser String
-identifier = lexeme $ (:) <$> alpha <*> many var_char where alpha = lower <|> upper
+identifier = except keywords $ lexeme $ (:) <$> alpha <*> many var_char where alpha = lower <|> upper
 
 nonzero :: Parser Int
 nonzero = read <$> ((:) <$> (oneOf "123456789") <*> many digit)
@@ -88,6 +96,11 @@ whitespace1 = void $ many1 (simpleWhitespace <|> comment)
 comment :: Parser ()
 comment = void $ char '#' <* manyTill anyChar (char '#')
 
+-- Basic Combinators
+
+parse_either :: Parser a -> Parser b -> Parser (Either a b)
+parse_either p q = (Left <$> try p) <|> (Right <$> q)
+
 lexeme :: Parser a -> Parser a
 lexeme p = p <* whitespace
 
@@ -98,13 +111,16 @@ symbol s   = void $ lexeme $ string s
 paren :: Parser a -> Parser a
 paren p = between (symbol "(") (symbol ")") p 
 
+except :: Eq a => [a] -> Parser a -> Parser a
+except ls p = do {l <- p; if l `elem` ls then parserZero else return l}
+
 -- Variables
 
 type_var :: Parser Type
-type_var = TVar <$> (lexeme $ (:) <$> upper <*> many var_char)
+type_var = TVar <$> (except keywords $ lexeme $ (:) <$> upper <*> many var_char)
 
 term_var :: Parser Term
-term_var = Var <$> (lexeme $ (:) <$> lower <*> many var_char)
+term_var = Var <$> (except keywords $ lexeme $ (:) <$> lower <*> many var_char)
 
 type_ann :: Parser [(String, Type)]
 type_ann = fillType <$> (many1 identifier <* symbol ":") <*> a_type

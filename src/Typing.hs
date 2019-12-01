@@ -94,15 +94,25 @@ typeof0 ctx (Inr t e) = (Sum t) <$> typeof0 ctx e
 typeof0 ctx (RecSum t e1 e2 e3) = do
   (ctx1, ctx3)  <- findViableSubs ctx e1 e3
   (ctx2, ctx3') <- findViableSubs ctx e2 e3
-  if ctx1 `permuteEquiv` ctx2 then
+  if ctx1 `permuteEquiv` ctx2 then do
     t1 <- typeof0 ctx1 e1
     t2 <- typeof0 ctx2 e2
     t3 <- typeof0 ctx3 e3
-    case e3 of
+    case t3 of
       Sum a b ->
-        case e2 of
-          Pi _ a' c ->
-          _         ->
+        case t1 of
+          Pi _ a' c1 ->
+            case t2 of
+              Pi _ b' c2
+                | t `arrowEquiv` c1 && t `arrowEquiv` c2 ->
+                  if a `arrowEquiv` a' && b `arrowEquiv` b' then
+                    return t
+                  else
+                    Left $ "Type mismatch in recursion. The input types for the functions should be " ++ showType ctx a
+                      ++ " and " ++ showType ctx b
+                | otherwise -> Left $ "Type mismatch in recursion. The output type should be " ++ showType ctx t ++ " for each function"
+              _          -> Left $ "Sum recursion expected the third term to be a function"
+          _          -> Left $ "Sum recursion expected the second term to be a function"
       _       -> Left $ "Sum recursion expected the last term to be a sum"
   else
     Left $ "Sum recursion expected the contexts (" ++ showCtx ctx1 ++ ") of " ++ showTerm ctx1 e1

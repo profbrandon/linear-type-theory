@@ -34,10 +34,10 @@ Typeof compose ;
 
 
 
-#---------------------------------------------------------#
-# Here we implement some functorial action of some of the #
-# data types, pairs, sums, and linear implications.       #
-#---------------------------------------------------------#
+#----------------------------------------------------------#
+# Here we implement some functorial actions of some of the #
+# data types, pairs, sums, and linear implications.        #
+#----------------------------------------------------------#
 
 # The functorial action of pairs in their first 
   component. This is the first time in this file
@@ -60,7 +60,25 @@ Define lift_pair2
 Typeof lift_pair2 ;
 
 
-# The functorial action of sums #
+# The cofunctorial action of linear implications
+  in their first argument.                       #
+
+Define lift_imp1
+    := \A B X : U@1, f : X -+ A, w : A -+ B.
+            \x : X. w (f x) ;
+
+Typeof lift_imp1 ;
+
+
+# The functorial action of linear implications
+  in their second argument.                    #
+
+Define lift_imp2
+    := \A B Y : U@1, f : B -+ Y, w : A -+ B.
+            \a : A. f (w a) ;
+
+Typeof lift_imp2 ;
+
 
 Define lift_sum
-    := \A B X Y : U@1, 
+    := \A B X 

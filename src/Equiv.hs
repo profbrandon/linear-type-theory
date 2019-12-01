@@ -15,7 +15,7 @@ module Equiv
 
 
 -- Foreign Imports
-import Data.List ( union, lookup, elem )
+import Data.List ( (\\), union, lookup, elem )
 
 -- Domestic Imports
 import Primitives ( Term(..), Type(..) )
@@ -109,8 +109,8 @@ alphaEquivT0 b _ _ = (b, False)
 -- of another, if so it returns true.
 permuteEquiv :: Context -> Context -> Bool
 permuteEquiv [] []      = True
-permuteEquiv (v:vs) ctx =
-  case v `lookup` ctx of
-    Nothing -> False
-    Just t  -> let ctx' = ctx \\ [(s,t)] in permuteEquiv vs ctx'
+permuteEquiv (v:vs) ctx
+  | v `elem` ctx = permuteEquiv vs ctx'
+  | otherwise    = False
+  where ctx' = ctx \\ [v]
 permuteEquiv _ _        = False
