@@ -78,7 +78,3 @@ Define lift_imp2
             \a : A. f (w a) ;
 
 Typeof lift_imp2 ;
-
-
-Define lift_sum
-    := \A B X 

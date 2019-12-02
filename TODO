@@ -1,7 +1,7 @@
 
 OPEN:
 
-[ ] Allow variable names like I and U.
+[ ] Allow variable names like U.
 
 [ ] Imports
 
@@ -15,17 +15,15 @@ OPEN:
     interpreter would execute the rest of the line, giving it's output, and
     waiting for the user to enter before displaying the next chunk of text.
 
-[ ] Comments. Planning on using the # # symbols to delineate comments
-
 [ ] Implement Term over Type abstraction
-
-[ ] Redefine the recursors to be constants using dependent types.
-
-[ ] Figure out how to (in some sense) lower types to the level of terms in
-    order to do definitions, normalization, typing, etc.
 
 
 CLOSED:
+
+[X] Figure out how to (in some sense) lower types to the level of terms in
+    order to do definitions, normalization, typing, etc.
+
+[X] Comments. Planning on using the # # symbols to delineate comments
 
 [X] Problem with the Typeof and Define jugdements upon type arguments.
 
