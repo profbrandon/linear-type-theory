@@ -1,0 +1,21 @@
+
+
+Define Bool
+        := I + I ;
+
+Define true
+        := inl I * ;
+
+Define false
+        := inr I * ;
+
+Define c_not 
+        := \A : U@1, w : A @ A, b : Bool.
+                rec+ (A @ A, 
+                      \x : I. recI (A @ A, w, x),
+                      \x : I. recI (A @ A, rec@ (A @ A, \u v : A. v @ u, w), x),
+                      b) ;
+
+Normal \A : U@1, u v : A. c_not A (u @ v) true ;
+
+Normal \A : U@1, u v : A. c_not A (u @ v) false ;
