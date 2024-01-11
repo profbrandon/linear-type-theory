@@ -8,3 +8,6 @@
 
 # ignore the lines file
 lines.hs
+
+# ignore system dependent information
+*.bat
